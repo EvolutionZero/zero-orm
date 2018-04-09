@@ -1,6 +1,7 @@
 package com.zero.orm.app.pojo;
 
 import java.sql.Date;
+import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -16,6 +17,14 @@ import lombok.ToString;
 @Table(name="t_code")
 public class Stock extends PojoBaseBean{
 
+	public Stock(){
+		
+	}
+	
+	public Stock(Map<String, Object> resultSet){
+		super(resultSet);
+	}
+	
 	@Getter
 	@Setter
 	@Id

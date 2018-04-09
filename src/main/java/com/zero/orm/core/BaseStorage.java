@@ -267,7 +267,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected List<T> query(String sql){
+	public List<T> query(String sql){
 		LOG.info(sql);
 		Connection connection = getConnection();
 		List<T> pojos = new LinkedList<T>();
@@ -282,7 +282,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected List<T> query(String sql, Object[] params){
+	public List<T> query(String sql, Object[] params){
 		List<T> pojos = new LinkedList<T>();
 		if(params == null || params.length == 0){
 			return pojos;
@@ -300,23 +300,23 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		return pojos;
 	}
 	
-	protected int delete(String sql, Object[] params){
+	public int delete(String sql, Object[] params){
 		return update(sql, params);
 	}
 	
-	protected int[] delete(String sql, Object[][] params){
+	public int[] delete(String sql, Object[][] params){
 		return update(sql, params);
 	}
 	
-	protected int insert(String sql, Object[] params){
+	public int insert(String sql, Object[] params){
 		return update(sql, params);
 	}
 	
-	protected int[] insert(String sql, Object[][] params){
+	public int[] insert(String sql, Object[][] params){
 		return update(sql, params);
 	}
 	
-	protected int[] update(String sql, Object[][] params){
+	public int[] update(String sql, Object[][] params){
 		if(params == null || params.length == 0){
 			return new int[]{};
 		}
@@ -333,7 +333,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		return new int[]{};
 	}
 	
-	protected int update(String sql, Object[] params){
+	public int update(String sql, Object[] params){
 		if(params == null || params.length == 0){
 			return 0;
 		}
