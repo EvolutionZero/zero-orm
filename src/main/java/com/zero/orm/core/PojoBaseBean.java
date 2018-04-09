@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public abstract class PojoBaseBean implements IPojo {
+public abstract class PojoBaseBean {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(PojoBaseBean.class);
 	
@@ -61,7 +61,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getQuerySql()
 	 */
-	@Override
+	
 	public String getQuerySql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -93,7 +93,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getSaveSql()
 	 */
-	@Override
+	
 	public String getSaveSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -129,7 +129,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateSql()
 	 */
-	@Override
+	
 	public String getUpdateSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -163,7 +163,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateSqlById()
 	 */
-	@Override
+	
 	public String getUpdateSqlById(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -210,7 +210,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteSql()
 	 */
-	@Override
+	
 	public String getDeleteByIdSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -245,7 +245,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteByIdSql()
 	 */
-	@Override
+	
 	public String getDeleteSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -291,7 +291,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamList()
 	 */
-	@Override
+	
 	public List<Object> getParamList(){
 		List<Object> list = new LinkedList<Object>();
 		Object[] paramArray = getParamArray();
@@ -304,7 +304,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamArray()
 	 */
-	@Override
+	
 	public Object[] getParamArray(){
 		List<Field> columnField = new LinkedList<Field>();
 		for (Field field : this.getClass().getDeclaredFields()) {
@@ -345,7 +345,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdList()
 	 */
-	@Override
+	
 	public List<Object> getUpdateByIdList(){
 		List<Object> list = new LinkedList<Object>();
 		Object[] paramArray = getUpdateByIdArray();
@@ -358,7 +358,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdArray()
 	 */
-	@Override
+	
 	public Object[] getUpdateByIdArray(){
 		List<Field> columnField = new LinkedList<Field>();
 		Field idField = null;
@@ -422,7 +422,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteByIdList()
 	 */
-	@Override
+	
 	public List<Object> getDeleteByIdList(){
 		List<Object> list = new LinkedList<Object>();
 		Object[] paramArray = getDeleteByIdArray();
@@ -435,7 +435,7 @@ public abstract class PojoBaseBean implements IPojo {
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteByIdArray()
 	 */
-	@Override
+	
 	public Object[] getDeleteByIdArray(){
 		List<Field> columnField = new LinkedList<Field>();
 		Field idField = null;
