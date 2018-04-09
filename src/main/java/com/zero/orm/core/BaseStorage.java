@@ -134,6 +134,46 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 	}
 	
 	
+	/**
+	 * 只存
+	 * @param datas
+	 */
+	public void saveOnly(List<T> datas){
+		if(datas.isEmpty()){
+			return ;
+		}
+		insert(save, getSaveParams(datas));
+	}
+	
+	/**
+	 * 根据主键进行判断，主键存在则跳过不处理
+	 * @param datas
+	 */
+	public void saveUnique(List<T> datas){
+		if(datas.isEmpty()){
+			return ;
+		}
+		List<Object> collectKey = new LinkedList<Object>();
+		List<Object[]> params = new LinkedList<Object[]>();
+		for (T data : datas) {
+			params.add(data.getParamArray());
+			collectKey.add(getIdValue(data));
+		}
+		List<String> dbKeys = getKeys(collectKey);
+		
+		List<T> saveDatas = new LinkedList<T>();
+		for (T data : datas) {
+			if(!dbKeys.contains(getIdValue(data))){
+				saveDatas.add(data);
+			}
+		}
+		insert(save, getSaveParams(saveDatas));
+	}
+	
+	/**
+	 * 根据主键进行判断，有则存储，没有则更新
+	 * @param datas
+	 */
 	public void saveOrUpdate(List<T> datas){
 		if(datas.isEmpty()){
 			return ;
@@ -159,41 +199,21 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		update(updateById, getUpdateByIdParams(updateDatas));
 	}
 	
-	public void saveOnly(List<T> datas){
-		if(datas.isEmpty()){
-			return ;
-		}
-		List<Object> collectKey = new LinkedList<Object>();
-		List<Object[]> params = new LinkedList<Object[]>();
-		for (T data : datas) {
-			params.add(data.getParamArray());
-			collectKey.add(getIdValue(data));
-		}
-		List<String> dbKeys = getKeys(collectKey);
-		
-		List<T> saveDatas = new LinkedList<T>();
-		for (T data : datas) {
-			if(!dbKeys.contains(getIdValue(data))){
-				saveDatas.add(data);
-			}
-		}
-		insert(save, getSaveParams(saveDatas));
-	}
 	
-	public Object[][] getSaveParams(List<T> datas){
+	protected Object[][] getSaveParams(List<T> datas){
 		Object[][] params = new Object[datas.size()][];
 		int idx = 0;
-		for (T node : datas) {
-			params[idx++] = node.getParamArray();
+		for (T data : datas) {
+			params[idx++] = data.getParamArray();
 		}
 		return params;
 	}
 	
-	public Object[][] getUpdateByIdParams(List<T> datas){
+	protected Object[][] getUpdateByIdParams(List<T> datas){
 		Object[][] params = new Object[datas.size()][];
 		int idx = 0;
-		for (T node : datas) {
-			params[idx++] = node.getUpdateByIdArray();
+		for (T data : datas) {
+			params[idx++] = data.getUpdateByIdArray();
 		}
 		return params;
 	}
