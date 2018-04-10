@@ -485,9 +485,9 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdList()
 	 */
 	
-	public List<Object> getUpdateByIdList(){
+	public List<Object> getUpdateByUniqueConstraintsList(){
 		List<Object> list = new LinkedList<Object>();
-		Object[] paramArray = getUpdateByIdArray();
+		Object[] paramArray = getUpdateByUniqueConstraintsArray();
 		for (Object object : paramArray) {
 			list.add(object);
 		}
@@ -498,26 +498,44 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdArray()
 	 */
 	
-	public Object[] getUpdateByIdArray(){
-		List<Field> columnField = new LinkedList<Field>();
-		Field idField = null;
-		for (Field field : this.getClass().getDeclaredFields()) {
+	public Object[] getUpdateByUniqueConstraintsArray(){
+		List<Field> updateColumnField = new LinkedList<Field>();
+		Field[] declaredFields = this.getClass().getDeclaredFields();
+		for (Field field : declaredFields) {
+			boolean isId = false;
+			boolean isUseDbTime = false;
+			boolean isUpdatable = true;
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					columnField.add(field);
-				}
 				if(annotation instanceof Id){
-					idField = field;
+					isId = true;
+				}
+				if(annotation instanceof Column){
+					Column column = (Column)annotation;
+					isUpdatable = column.updatable();
+					String columnDefinition = column.columnDefinition();
+					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+							|| columnDefinition.toUpperCase().contains("SYSDATE")){
+						isUseDbTime = true;
+					}
+				}
+			}
+			if(!isId && isUpdatable){
+				if(!isUseDbTime){
+					updateColumnField.add(field);
 				}
 			}
 		}
-		Object[] params = new Object[columnField.size() + 1];
-		int idx = 0;
-		for (Field field : columnField) {
-			params[idx++] = getValue(field);
+		Object[] uniqueConstraintsArray = getUniqueConstraintsArray();
+		Object[] params = new Object[updateColumnField.size() + uniqueConstraintsArray.length]; 
+		for (int i = 0; i < updateColumnField.size(); i++) {
+			params[i] = getValue(updateColumnField.get(i));
+			
 		}
-		params[columnField.size()] = getValue(idField);
+		for (int i = 0; i < uniqueConstraintsArray.length; i++) {
+			params[updateColumnField.size() + i] = uniqueConstraintsArray[i];
+			
+		}
 		return params;
 	}
 	

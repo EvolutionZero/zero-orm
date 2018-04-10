@@ -37,7 +37,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	protected String exist;
 	protected String query;
 	protected String save;
-	protected String updateById;
+	protected String updateByUniqueConstraints;
 	protected String deleteById;
 	
 	
@@ -64,7 +64,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				exist = bean.getExistSql();
 				query = bean.getQuerySql();
 				save = bean.getSaveSql();
-				updateById = bean.getUpdateSqlByUniqueConstraints();
+				updateByUniqueConstraints = bean.getUpdateSqlByUniqueConstraints();
 				deleteById = bean.getDeleteByIdSql();
 				if(idField != null){
 					Column column = idField.getDeclaredAnnotation(Column.class);
@@ -76,8 +76,10 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 					String databaseProductName = connection.getMetaData().getDatabaseProductName();
 					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
 						save = save.replace("#timestamp#", "now()");
+						updateByUniqueConstraints = updateByUniqueConstraints.replace("#timestamp#", "now()");
 					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
 						save = save.replace("#timestamp#", "sysdate");
+						updateByUniqueConstraints = updateByUniqueConstraints.replace("#timestamp#", "sysdate");
 					}
 				} catch (SQLException e1) {
 					LOG.error("", e1);
@@ -174,7 +176,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			}
 		}
 		insert(save, getSaveParams(saveDatas));
-		update(updateById, getUpdateByIdParams(updateDatas));
+		update(updateByUniqueConstraints, getUpdateByUniqueConstraintsParams(updateDatas));
 	}
 	
 	
@@ -193,11 +195,11 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		return params;
 	}
 	
-	protected Object[][] getUpdateByIdParams(List<T> datas){
+	protected Object[][] getUpdateByUniqueConstraintsParams(List<T> datas){
 		Object[][] params = new Object[datas.size()][];
 		int idx = 0;
 		for (T data : datas) {
-			params[idx++] = data.getUpdateByIdArray();
+			params[idx++] = data.getUpdateByUniqueConstraintsArray();
 		}
 		return params;
 	}

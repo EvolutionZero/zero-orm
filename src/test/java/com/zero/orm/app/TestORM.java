@@ -52,7 +52,8 @@ public class TestORM {
 //		System.out.println(stock.getUpdateByIdList());
 //		System.out.println(stock.getDeleteByIdList());
 //		System.out.println(stock.getExistSql());
-		System.out.println(stock.getUpdateSqlByUniqueConstraints());
+//		System.out.println(stock.getUpdateSqlByUniqueConstraints());
+//		System.out.println(stock.getUpdateByUniqueConstraintsList());
 		
 		Stock stock2 = new Stock();
 		stock2.setId(1024);
@@ -64,11 +65,14 @@ public class TestORM {
 		stock2.setBussiness("割韭菜");
 		stock2.setIsStock("Y");
 		stock2.setLocation("C");
-		stock2.setPlate("深圳A股");
+		stock2.setPlate("深圳B股");
 		
 		LinkedList<Stock> list = new LinkedList<Stock>();
 		list.add(stock);
 		list.add(stock2);
+		
+		stockStorage.saveOrUpdate(stock2);
+		
 //		stockStorage.saveUnique(list);
 //		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
