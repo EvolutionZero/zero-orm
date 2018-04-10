@@ -17,7 +17,7 @@ import lombok.ToString;
 import com.zero.orm.core.PojoBaseBean;
 
 @ToString
-@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
+@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name", "plate"}))
 public class Stock extends PojoBaseBean{
 
 	public Stock(){

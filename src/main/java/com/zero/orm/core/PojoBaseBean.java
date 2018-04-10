@@ -295,6 +295,26 @@ public abstract class PojoBaseBean {
 				uniqueColumnNames.add(columnName);
 			}
 		}
+		if(uniqueColumnNames.isEmpty()){
+			Field[] declaredFields = this.getClass().getDeclaredFields();
+			for (Field field : declaredFields) {
+				String columnName = "";
+				boolean isId = false;
+				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+				for (Annotation annotation : declaredAnnotations) {
+					if(annotation instanceof Id){
+						isId = true;
+					}
+					if(annotation instanceof Column){
+						Column column = (Column)annotation;
+						columnName = column.name();
+					}
+				}
+				if(isId && !"".equals(columnName)){
+					uniqueColumnNames.add(columnName);
+				}
+			}
+		}
 		String tableName = tableAnnotation.name();
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ");
@@ -306,10 +326,10 @@ public abstract class PojoBaseBean {
 		}
 		sql.append(" FROM ").append(tableName).append(" WHERE ");
 		for (String columnName : uniqueColumnNames) {
-			sql.append(columnName).append(" = ?,");
+			sql.append(columnName).append(" = ? AND ");
 		}
 		if(sql.length() > 0){
-			sql.delete(sql.length() - 1, sql.length());
+			sql.delete(sql.length() - 4, sql.length());
 		}
 		return sql.toString();
 		
@@ -343,20 +363,49 @@ public abstract class PojoBaseBean {
 				uniqueColumnNames.add(columnName);
 			}
 		}
-		Object[] params  = new Object[uniqueColumnNames.size()];
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		int idx = 0;
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					if(uniqueColumnNames.contains(column.name())){
-						Object value = getValue(field);
-						params[idx++] = value;
+		
+		Object[] params = new Object[]{};
+		if(uniqueColumnNames.isEmpty()){
+			Field[] declaredFields = this.getClass().getDeclaredFields();
+			for (Field field : declaredFields) {
+				String columnName = "";
+				boolean isId = false;
+				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+				for (Annotation annotation : declaredAnnotations) {
+					if(annotation instanceof Id){
+						isId = true;
+					}
+					if(annotation instanceof Column){
+						Column column = (Column)annotation;
+						columnName = column.name();
 					}
 				}
+				if(isId && !"".equals(columnName)){
+					params = new Object[]{getValue(field)};
+				}
 			}
+		} else {
+			params  = new Object[uniqueColumnNames.size()];
+			Field[] declaredFields = this.getClass().getDeclaredFields();
+			int idx = 0;
+			for (String uniqueColumnName : uniqueColumnNames) {
+				Field uniqueColumnField = null;
+				for (Field field : declaredFields) {
+					Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+					for (Annotation annotation : declaredAnnotations) {
+						if(annotation instanceof Column){
+							Column column = (Column)annotation;
+							if(column.name().equals(uniqueColumnName)){
+								uniqueColumnField = field;
+							}
+						}
+					}
+				}
+				if(uniqueColumnField != null){
+					params[idx++] = getValue(uniqueColumnField);
+				}
+			}
+			
 		}
 		return params;
 		
