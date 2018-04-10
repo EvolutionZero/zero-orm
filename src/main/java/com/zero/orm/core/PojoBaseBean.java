@@ -322,7 +322,7 @@ public abstract class PojoBaseBean {
 	
 	public List<Object> getParamList(){
 		List<Object> list = new LinkedList<Object>();
-		Object[] paramArray = getParamArray();
+		Object[] paramArray = getSaveArray();
 		for (Object object : paramArray) {
 			list.add(object);
 		}
@@ -333,14 +333,29 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamArray()
 	 */
 	
-	public Object[] getParamArray(){
+	public Object[] getSaveArray(){
 		List<Field> columnField = new LinkedList<Field>();
 		for (Field field : this.getClass().getDeclaredFields()) {
+			boolean isId = false;
+			boolean isIdentityStrategy = false;
+			boolean isColumn = false;
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					columnField.add(field);
+				if(annotation instanceof Id){
+					isId = true;
 				}
+				if(annotation instanceof GeneratedValue){
+					GeneratedValue generatedValue = (GeneratedValue)annotation;
+					if(generatedValue.strategy() == GenerationType.IDENTITY){
+						isIdentityStrategy = true;
+					}
+				}
+				if(annotation instanceof Column){
+					isColumn = true;
+				}
+			}
+			if(isColumn && !(isId == true && isIdentityStrategy == true)){
+				columnField.add(field);
 			}
 		}
 		Object[] params = new Object[columnField.size()];

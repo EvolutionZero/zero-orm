@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.sql.Date;
 import java.util.Properties;
 
-import org.hibernate.id.UUIDHexGenerator;
 import org.junit.Before;
 import org.junit.Test;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
@@ -41,6 +40,7 @@ public class TestORM {
 		stock.setBussiness("割韭菜");
 		stock.setIsStock("Y");
 		stock.setLocation("C");
+		stock.setPlate("深圳A股");
 		System.out.println(stock.getQuerySql());
 		System.out.println(stock.getSaveSql());
 		System.out.println(stock.getUpdateSql());
@@ -52,11 +52,11 @@ public class TestORM {
 		System.out.println(stock.getDeleteByIdList());
 		System.out.println(stock.getExistSql());
 		
-		stockStorage.saveOnly(stock);
-		
+		stockStorage.saveUnique(stock);
+//		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
 //		for (int i = 0; i < 10; i++) {
-//			stockStorage.query(sql, new Object[]{"sh600000"});
+//			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
 //			
 //		}
 	}

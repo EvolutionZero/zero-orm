@@ -8,6 +8,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,12 +53,20 @@ public abstract class BaseDbOperate<T> {
 				}
 			}
 			
+			Set<String> rowColumnNames = new HashSet<String>();
+			ResultSetMetaData metaData = rs.getMetaData();
+			for (int i = 1; i <= metaData.getColumnCount(); i++) {
+				String rowColumnName = metaData.getColumnName(i);
+				rowColumnNames.add(rowColumnName);
+			}
 			while(rs.next()){
 				Map<String, Object> kvs = new HashMap<String, Object>();
 				for (Iterator<String> iterator = columnNames.iterator(); iterator.hasNext(); ) {
 					String columnName = iterator.next();
-					Object value = rs.getObject(columnName);
-					kvs.put(columnName, value);
+					if(rowColumnNames.contains(columnName)){
+						Object value = rs.getObject(columnName);
+						kvs.put(columnName, value);
+					}
 				}
 				try {
 					Constructor<?> constructor = clazz.getDeclaredConstructor(Map.class);

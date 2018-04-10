@@ -99,7 +99,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		List<Object> collectKey = new LinkedList<Object>();
 		List<Object[]> params = new LinkedList<Object[]>();
 		for (T data : datas) {
-			params.add(data.getParamArray());
+			params.add(data.getSaveArray());
 			collectKey.add(getIdValue(data));
 		}
 		List<String> dbKeys = getKeys(collectKey);
@@ -130,7 +130,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		List<Object> collectKey = new LinkedList<Object>();
 		List<Object[]> params = new LinkedList<Object[]>();
 		for (T data : datas) {
-			params.add(data.getParamArray());
+			params.add(data.getSaveArray());
 			collectKey.add(getIdValue(data));
 		}
 		List<String> dbKeys = getKeys(collectKey);
@@ -159,7 +159,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		Object[][] params = new Object[datas.size()][];
 		int idx = 0;
 		for (T data : datas) {
-			params[idx++] = data.getParamArray();
+			params[idx++] = data.getSaveArray();
 		}
 		return params;
 	}
