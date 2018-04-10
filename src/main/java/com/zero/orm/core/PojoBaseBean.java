@@ -161,32 +161,40 @@ public abstract class PojoBaseBean {
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
 		
-		List<String> columnNames = new LinkedList<String>();
+		StringBuilder sql = new StringBuilder("UPDATE ");
+		sql.append(tableName).append(" SET ");
 		Field[] declaredFields = this.getClass().getDeclaredFields();
 		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			boolean isId = false;
 			String columnName = "";
+			boolean isId = false;
+			boolean isUseDbTime = false;
+			boolean isUpdatable = true;
+			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
 				if(annotation instanceof Id){
 					isId = true;
 				}
 				if(annotation instanceof Column){
 					Column column = (Column)annotation;
-					if(column.updatable()){
-						columnName = column.name();
+					isUpdatable = column.updatable();
+					columnName = column.name();
+					String columnDefinition = column.columnDefinition();
+					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+							|| columnDefinition.toUpperCase().contains("SYSDATE")){
+						isUseDbTime = true;
 					}
 				}
 			}
-			if(!isId && !"".equals(columnName)){
-				columnNames.add(columnName);
+			if(!isId && isUpdatable){
+				sql.append(columnName).append(" = ");
+				if(isUseDbTime){
+					sql.append("#timestamp#,");
+				} else {
+					sql.append("?,");
+				}
 			}
 		}
-		StringBuilder sql = new StringBuilder("UPDATE ");
-		sql.append(tableName).append(" SET ");
-		for (String columnName : columnNames) {
-			sql.append(columnName).append(" = ?,");
-		}
+		
 		if(sql.toString().endsWith(",")){
 			sql.delete(sql.length() - 1, sql.length());
 		}
@@ -198,54 +206,45 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateSqlById()
 	 */
 	
-	public String getUpdateSqlById(){
+	public String getUpdateSqlByUniqueConstraints(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		String tableName = tableAnnotation.name();
-		
-		List<String> columnNames = new LinkedList<String>();
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		Field idField = null;
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			boolean isId = false;
-			String columnName = "";
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					if(column.updatable()){
+		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
+		List<String> uniqueColumnNames = new LinkedList<String>();
+		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
+			String[] columnNames = uniqueConstraint.columnNames();
+			for (String columnName : columnNames) {
+				uniqueColumnNames.add(columnName);
+			}
+		}
+		if(uniqueColumnNames.isEmpty()){
+			Field[] declaredFields = this.getClass().getDeclaredFields();
+			for (Field field : declaredFields) {
+				String columnName = "";
+				boolean isId = false;
+				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+				for (Annotation annotation : declaredAnnotations) {
+					if(annotation instanceof Id){
+						isId = true;
+					}
+					if(annotation instanceof Column){
+						Column column = (Column)annotation;
 						columnName = column.name();
 					}
 				}
-				if(annotation instanceof Id){
-					idField = field;
+				if(isId && !"".equals(columnName)){
+					uniqueColumnNames.add(columnName);
 				}
 			}
-			if(!isId && !"".equals(columnName)){
-				columnNames.add(columnName);
-			}
 		}
-		
-		StringBuilder sql = new StringBuilder("UPDATE ");
-		sql.append(tableName).append(" SET ");
-		for (String columnName : columnNames) {
-			sql.append(columnName).append(" = ?,");
+		StringBuilder sql = new StringBuilder(getUpdateSql());
+		sql.append(" WHERE ");
+		for (String columnName : uniqueColumnNames) {
+			sql.append(columnName).append(" = ? AND ");
 		}
-		if(sql.toString().endsWith(",")){
-			sql.delete(sql.length() - 1, sql.length());
-		}
-		
-		if(idField != null){
-			Column column = idField.getDeclaredAnnotation(Column.class);
-			if(column != null){
-				String idColumnName = column.name();
-				sql.append(" WHERE ").append(idColumnName).append(" = ?");
-			}
+		if(sql.length() > 0){
+			sql.delete(sql.length() - 4, sql.length());
 		}
 		return sql.toString();
-		
 	}
 	
 	/* (non-Javadoc)
@@ -348,23 +347,23 @@ public abstract class PojoBaseBean {
 	
 	public List<Object> getExistList(){
 		List<Object> list = new LinkedList<Object>();
-		Object[] paramArray = getExistArray();
+		Object[] paramArray = getUniqueConstraintsArray();
 		for (Object object : paramArray) {
 			list.add(object);
 		}
 		return list;
 	}
 	
-	public String getExistMD5(){
+	public String getUniqueConstraintsMD5(){
 		StringBuilder sb = new StringBuilder();
-		Object[] existArray = getExistArray();
+		Object[] existArray = getUniqueConstraintsArray();
 		for (int i = 0; i < existArray.length; i++) {
 			sb.append(existArray[i]).append("|");
 		}
 		return DigestUtils.md5Hex(sb.toString());
 	}
 	
-	public Object[] getExistArray(){
+	public Object[] getUniqueConstraintsArray(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
 		List<String> uniqueColumnNames = new LinkedList<String>();

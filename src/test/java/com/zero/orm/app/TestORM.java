@@ -52,7 +52,7 @@ public class TestORM {
 //		System.out.println(stock.getUpdateByIdList());
 //		System.out.println(stock.getDeleteByIdList());
 //		System.out.println(stock.getExistSql());
-//		System.out.println(stock.getExistList());
+		System.out.println(stock.getUpdateSqlByUniqueConstraints());
 		
 		Stock stock2 = new Stock();
 		stock2.setId(1024);
@@ -69,7 +69,7 @@ public class TestORM {
 		LinkedList<Stock> list = new LinkedList<Stock>();
 		list.add(stock);
 		list.add(stock2);
-		stockStorage.saveUnique(list);
+//		stockStorage.saveUnique(list);
 //		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
 //		for (int i = 0; i < 10; i++) {
