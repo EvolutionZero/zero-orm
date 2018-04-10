@@ -4,14 +4,16 @@ import java.sql.Date;
 import java.util.Map;
 
 import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
-import com.zero.orm.core.PojoBaseBean;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import com.zero.orm.core.PojoBaseBean;
 
 @ToString
 @Table(name="t_code")
@@ -28,6 +30,12 @@ public class Stock extends PojoBaseBean{
 	@Getter
 	@Setter
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name="id")
+	private Integer id;
+	
+	@Getter
+	@Setter
 	@Column(name="code")
 	private String code;
 	

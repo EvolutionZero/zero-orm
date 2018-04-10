@@ -82,6 +82,12 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		insert(save, getSaveParams(datas));
 	}
 	
+	public void saveOnly(T data){
+		LinkedList<T> list = new LinkedList<T>();
+		list.add(data);
+		saveOnly(list);
+	}
+	
 	/**
 	 * 根据主键进行判断，主键存在则跳过不处理
 	 * @param datas
@@ -105,6 +111,12 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			}
 		}
 		insert(save, getSaveParams(saveDatas));
+	}
+	
+	public void saveUnique(T data){
+		LinkedList<T> list = new LinkedList<T>();
+		list.add(data);
+		saveUnique(list);
 	}
 	
 	/**
@@ -136,6 +148,12 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		update(updateById, getUpdateByIdParams(updateDatas));
 	}
 	
+	
+	public void saveOrUpdate(T data){
+		LinkedList<T> list = new LinkedList<T>();
+		list.add(data);
+		saveOrUpdate(list);
+	}
 	
 	protected Object[][] getSaveParams(List<T> datas){
 		Object[][] params = new Object[datas.size()][];

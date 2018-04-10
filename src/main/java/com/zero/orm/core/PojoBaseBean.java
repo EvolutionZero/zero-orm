@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
@@ -100,22 +102,34 @@ public abstract class PojoBaseBean {
 		
 		List<String> columnNames = new LinkedList<String>();
 		Field[] declaredFields = this.getClass().getDeclaredFields();
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					String columnName = column.name();
-					columnNames.add(columnName);
-				}
-			}
-		}
 		StringBuilder sql = new StringBuilder("INSERT INTO ");
 		sql.append(tableName).append("(");
 		StringBuilder values = new StringBuilder();
-		for (String columnName : columnNames) {
-			sql.append(columnName).append(",");
-			values.append("?,");
+		for (Field field : declaredFields) {
+			String columnName = "";
+			boolean isId = false;
+			boolean isIdentityStrategy = false;
+			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Id){
+					isId = true;
+				}
+				if(annotation instanceof GeneratedValue){
+					GeneratedValue generatedValue = (GeneratedValue)annotation;
+					if(generatedValue.strategy() == GenerationType.IDENTITY){
+						isIdentityStrategy = true;
+					}
+				}
+				if(annotation instanceof Column){
+					Column column = (Column)annotation;
+					columnName = column.name();
+				}
+			}
+			if(!(isId == true && isIdentityStrategy == true)){
+				columnNames.add(columnName);
+				sql.append(columnName).append(",");
+				values.append("?,");
+			}
 		}
 		if(sql.toString().endsWith(",")){
 			sql.delete(sql.length() - 1, sql.length());
@@ -138,14 +152,21 @@ public abstract class PojoBaseBean {
 		Field[] declaredFields = this.getClass().getDeclaredFields();
 		for (Field field : declaredFields) {
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			boolean isId = false;
+			String columnName = "";
 			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Id){
+					isId = true;
+				}
 				if(annotation instanceof Column){
 					Column column = (Column)annotation;
 					if(column.updatable()){
-						String columnName = column.name();
-						columnNames.add(columnName);
+						columnName = column.name();
 					}
 				}
+			}
+			if(!isId && !"".equals(columnName)){
+				columnNames.add(columnName);
 			}
 		}
 		StringBuilder sql = new StringBuilder("UPDATE ");
@@ -173,17 +194,24 @@ public abstract class PojoBaseBean {
 		Field idField = null;
 		for (Field field : declaredFields) {
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			boolean isId = false;
+			String columnName = "";
 			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Id){
+					isId = true;
+				}
 				if(annotation instanceof Column){
 					Column column = (Column)annotation;
 					if(column.updatable()){
-						String columnName = column.name();
-						columnNames.add(columnName);
+						columnName = column.name();
 					}
 				}
 				if(annotation instanceof Id){
 					idField = field;
 				}
+			}
+			if(!isId && !"".equals(columnName)){
+				columnNames.add(columnName);
 			}
 		}
 		

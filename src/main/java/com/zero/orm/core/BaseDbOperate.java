@@ -93,10 +93,11 @@ public abstract class BaseDbOperate<T> {
 			LOG.error("", e);
 		} finally {
 			DbUtils.closeQuietly(connection);
-
+			long end = System.currentTimeMillis();
+			
 			StringBuilder info = new StringBuilder("\n");
 			info.append("执行SQL: \n").append(sql).append("\n");
-			info.append("执行耗时: ").append(System.currentTimeMillis() - start).append(" ms.");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
 			LOG.info(info.toString());
 		}
 		return pojos;
@@ -116,11 +117,12 @@ public abstract class BaseDbOperate<T> {
 			LOG.error("", e);
 		} finally {
 			DbUtils.closeQuietly(connection);
+			long end = System.currentTimeMillis();
 			
 			StringBuilder info = new StringBuilder("\n");
 			info.append("执行SQL: \n").append(sql).append("\n");
 			info.append("设置参数: \n").append(printf(params)).append("\n");
-			info.append("执行耗时: ").append(System.currentTimeMillis() - start).append(" ms.");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
 			LOG.info(info.toString());
 		}
 		return pojos;
@@ -154,11 +156,12 @@ public abstract class BaseDbOperate<T> {
 			LOG.error("", e);
 		} finally {
 			DbUtils.closeQuietly(connection);
+			long end = System.currentTimeMillis();
 			
 			StringBuilder info = new StringBuilder("\n");
 			info.append("执行SQL: \n").append(sql).append("\n");
 			info.append("设置参数: \n").append(printf(params)).append("\n");
-			info.append("执行耗时: ").append(System.currentTimeMillis() - start).append(" ms.");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
 			LOG.info(info.toString());
 		}
 		return new int[]{};
@@ -176,10 +179,11 @@ public abstract class BaseDbOperate<T> {
 			LOG.error("", e);
 		} finally {
 			DbUtils.closeQuietly(connection);
+			long end = System.currentTimeMillis();
 			StringBuilder info = new StringBuilder("\n");
 			info.append("执行SQL: \n").append(sql).append("\n");
 			info.append("设置参数: \n").append(printf(params)).append("\n");
-			info.append("执行耗时: ").append(System.currentTimeMillis() - start).append(" ms.");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
 			LOG.info(info.toString());
 		}
 		return 0;
@@ -190,6 +194,9 @@ public abstract class BaseDbOperate<T> {
 		StringBuilder sb = new StringBuilder();
 		for (Object[] object : params) {
 			sb.append(printf(object)).append("\n");
+		}
+		if(sb.length() > 1){
+			sb.delete(sb.length() - 1, sb.length());
 		}
 		return sb.toString();
 	}

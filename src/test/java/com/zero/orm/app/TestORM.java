@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.sql.Date;
 import java.util.Properties;
 
+import org.hibernate.id.UUIDHexGenerator;
 import org.junit.Before;
 import org.junit.Test;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
@@ -31,6 +32,7 @@ public class TestORM {
 	public void testQuery() {
 		StockStorage stockStorage = new StockStorage();
 		Stock stock = new Stock();
+		stock.setId(1024);
 		stock.setCode("XZ000001");
 		stock.setName("零的世界");
 		stock.setStatus(1);
@@ -49,6 +51,9 @@ public class TestORM {
 		System.out.println(stock.getUpdateByIdList());
 		System.out.println(stock.getDeleteByIdList());
 		System.out.println(stock.getExistSql());
+		
+		stockStorage.saveOnly(stock);
+		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
 //		for (int i = 0; i < 10; i++) {
 //			stockStorage.query(sql, new Object[]{"sh600000"});
