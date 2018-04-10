@@ -3,35 +3,25 @@ package com.zero.orm.core;
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import org.apache.commons.dbutils.DbUtils;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class BaseStorage<T extends PojoBaseBean> {
+public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<T>{
 
 	private static final Logger LOG = LoggerFactory.getLogger(BaseStorage.class);
 	
@@ -43,43 +33,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 	protected String save;
 	protected String updateById;
 	protected String deleteById;
-	private Set<String> columnNames = new HashSet<String>();
-	
-	@SuppressWarnings("rawtypes")
-	private ResultSetHandler handler = new ResultSetHandler<List<T>>(){
-		@SuppressWarnings("unchecked")
-		@Override
-		public List<T> handle(ResultSet rs) throws SQLException {
-			LinkedList<T> pojos = new LinkedList<T>();
-			while(rs.next()){
-				Map<String, Object> kvs = new HashMap<String, Object>();
-				for (Iterator<String> iterator = columnNames.iterator(); iterator.hasNext(); ) {
-					String columnName = iterator.next();
-					Object value = rs.getObject(columnName);
-					kvs.put(columnName, value);
-				}
-				Class<?> clazz = getGenericClass();
-				try {
-					Constructor<?> constructor = clazz.getDeclaredConstructor(Map.class);
-					T pojo = (T)constructor.newInstance(kvs);
-					pojos.add(pojo);
-				} catch (NoSuchMethodException e) {
-					LOG.error("", e);
-				} catch (SecurityException e) {
-					LOG.error("", e);
-				} catch (InstantiationException e) {
-					LOG.error("", e);
-				} catch (IllegalAccessException e) {
-					LOG.error("", e);
-				} catch (IllegalArgumentException e) {
-					LOG.error("", e);
-				} catch (InvocationTargetException e) {
-					LOG.error("", e);
-				}
-			}
-			return pojos;
-		}
-	};
 	
 	public abstract Connection getConnection();
 	
@@ -95,9 +48,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 				for (Annotation annotation : declaredAnnotations) {
 					if(annotation instanceof Id){
 						idField = field;
-					}
-					if(annotation instanceof Column){
-						columnNames.add(field.getName());
 					}
 				}
 			}
@@ -120,19 +70,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		
 		}
 	}
-	
-	private Class<?> getGenericClass(){
-		ParameterizedType parameterizedType = (ParameterizedType) this.getClass().getGenericSuperclass();  
-		Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();  
-		try {
-			return actualTypeArguments.length > 0 ? Class.forName(actualTypeArguments[0].getTypeName()) : null;
-			
-		} catch (ClassNotFoundException e) {
-			LOG.error("", e);
-		}
-		return null;
-	}
-	
 	
 	/**
 	 * 只存
@@ -286,90 +223,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		delete(deleteById, new Object[]{idValue});
 	}
 	
-	@SuppressWarnings("unchecked")
-	public List<T> query(String sql){
-		LOG.info(sql);
-		Connection connection = getConnection();
-		List<T> pojos = new LinkedList<T>();
-		try {
-			pojos = (List<T>)new QueryRunner().query(connection, sql, handler);
-		} catch (Exception e) {
-			LOG.error("", e);
-		} finally {
-			DbUtils.closeQuietly(connection);
-		}
-		return pojos;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public List<T> query(String sql, Object[] params){
-		List<T> pojos = new LinkedList<T>();
-		if(params == null || params.length == 0){
-			return pojos;
-		}
-		LOG.info(sql);
-		LOG.info(printf(params));
-		Connection connection = getConnection();
-		try {
-			pojos = (List<T>)new QueryRunner().query(connection, sql, handler, params);
-		} catch (Exception e) {
-			LOG.error("", e);
-		} finally {
-			DbUtils.closeQuietly(connection);
-		}
-		return pojos;
-	}
-	
-	public int delete(String sql, Object[] params){
-		return update(sql, params);
-	}
-	
-	public int[] delete(String sql, Object[][] params){
-		return update(sql, params);
-	}
-	
-	public int insert(String sql, Object[] params){
-		return update(sql, params);
-	}
-	
-	public int[] insert(String sql, Object[][] params){
-		return update(sql, params);
-	}
-	
-	public int[] update(String sql, Object[][] params){
-		if(params == null || params.length == 0){
-			return new int[]{};
-		}
-		LOG.info(sql);
-		LOG.info(printf(params));
-		Connection connection = getConnection();
-		try {
-			return new QueryRunner().batch(connection, sql, params);
-		} catch (SQLException e) {
-			LOG.error("", e);
-		} finally {
-			DbUtils.closeQuietly(connection);
-		}
-		return new int[]{};
-	}
-	
-	public int update(String sql, Object[] params){
-		if(params == null || params.length == 0){
-			return 0;
-		}
-		LOG.info(sql);
-		LOG.info(printf(params));
-		Connection connection = getConnection();
-		try {
-			return new QueryRunner().update(connection, sql, params);
-		} catch (SQLException e) {
-			LOG.error("", e);
-		} finally {
-			DbUtils.closeQuietly(connection);
-		}
-		return 0;
-	}
-	
 	protected String toInList(Collection<Object> datas){
 		StringBuilder sb = new StringBuilder();
 		for (Object data : datas) {
@@ -378,7 +231,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 		if(sb.length() > 1){
 			sb.delete(sb.length() - 1, sb.length());
 		}
-		return "".equals(sb.toString()) ? "''" : sb.toString();
+		return "".equals(sb.toString()) ? "' '" : sb.toString();
 	}
 	
 	protected String toNumbericInList(Collection<Object> datas){
@@ -390,25 +243,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> {
 			sb.delete(sb.length() - 1, sb.length());
 		}
 		return "".equals(sb.toString()) ? "''" : sb.toString();
-	}
-	
-	private String printf(Object[][] params){
-		StringBuilder sb = new StringBuilder("\n");
-		for (Object[] object : params) {
-			sb.append(printf(object));
-		}
-		return sb.toString();
-	}
-	
-	private String printf(Object[] params){
-		StringBuilder sb = new StringBuilder("\n");
-		for (Object object : params) {
-			sb.append(object).append(",");
-		}
-		if(sb.length() > 1){
-			sb.delete(sb.length() - 1, sb.length());
-		}
-		return sb.toString();
 	}
 	
 }

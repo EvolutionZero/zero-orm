@@ -3,7 +3,7 @@ package com.zero.orm.app;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.List;
+import java.sql.Date;
 import java.util.Properties;
 
 import org.junit.Before;
@@ -30,9 +30,30 @@ public class TestORM {
 	@Test
 	public void testQuery() {
 		StockStorage stockStorage = new StockStorage();
-		String sql = new Stock().getQuerySql() + " WHERE CODE = ?";
-		List<Stock> stocks = stockStorage.query(sql, new Object[]{"sh600000"});
-		System.out.println(stocks);
+		Stock stock = new Stock();
+		stock.setCode("XZ000001");
+		stock.setName("零的世界");
+		stock.setStatus(1);
+		stock.setListDate(new Date(new java.util.Date().getTime()));
+		stock.setIndustry("金融");
+		stock.setBussiness("割韭菜");
+		stock.setIsStock("Y");
+		stock.setLocation("C");
+		System.out.println(stock.getQuerySql());
+		System.out.println(stock.getSaveSql());
+		System.out.println(stock.getUpdateSql());
+		System.out.println(stock.getUpdateSqlById());
+		System.out.println(stock.getDeleteSql());
+		System.out.println(stock.getDeleteByIdSql());
+		System.out.println(stock.getParamList());
+		System.out.println(stock.getUpdateByIdList());
+		System.out.println(stock.getDeleteByIdList());
+		System.out.println(stock.getExistSql());
+//		String sql = stock.getQuerySql() + " WHERE CODE = ?";
+//		for (int i = 0; i < 10; i++) {
+//			stockStorage.query(sql, new Object[]{"sh600000"});
+//			
+//		}
 	}
 
 }
