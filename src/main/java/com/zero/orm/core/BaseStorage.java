@@ -9,7 +9,6 @@ import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -29,6 +28,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	protected String idColumnName;
 	protected Field idField;
 	
+	protected String exist;
 	protected String query;
 	protected String save;
 	protected String updateById;
@@ -54,6 +54,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			
 			try {
 				PojoBaseBean bean = (PojoBaseBean)clazz.newInstance();
+				exist = bean.getExistSql();
 				query = bean.getQuerySql();
 				save = bean.getSaveSql();
 				updateById = bean.getUpdateSqlById();
@@ -102,11 +103,15 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			params.add(data.getSaveArray());
 			collectKey.add(getIdValue(data));
 		}
-		List<String> dbKeys = getKeys(collectKey);
+		List<T> existPojos = getExistPojos(datas);
+		List<String> dbKeys = new LinkedList<String>();
+		for (T pojo : existPojos) {
+			dbKeys.add(pojo.getExistMD5());
+		}
 		
 		List<T> saveDatas = new LinkedList<T>();
 		for (T data : datas) {
-			if(!dbKeys.contains(getIdValue(data))){
+			if(!dbKeys.contains(data.getExistMD5())){
 				saveDatas.add(data);
 			}
 		}
@@ -127,18 +132,21 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		if(datas.isEmpty()){
 			return ;
 		}
-		List<Object> collectKey = new LinkedList<Object>();
 		List<Object[]> params = new LinkedList<Object[]>();
 		for (T data : datas) {
 			params.add(data.getSaveArray());
-			collectKey.add(getIdValue(data));
 		}
-		List<String> dbKeys = getKeys(collectKey);
+		
+		List<T> existPojos = getExistPojos(datas);
+		List<String> dbKeys = new LinkedList<String>();
+		for (T pojo : existPojos) {
+			dbKeys.add(pojo.getExistMD5());
+		}
 		
 		List<T> saveDatas = new LinkedList<T>();
 		List<T> updateDatas = new LinkedList<T>();
 		for (T data : datas) {
-			if(dbKeys.contains(getIdValue(data))){
+			if(dbKeys.contains(data.getExistMD5())){
 				updateDatas.add(data);
 			} else {
 				saveDatas.add(data);
@@ -173,47 +181,46 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		return params;
 	}
 	
-	protected List<String> getKeys(Collection<Object> datas){
-		List<String> result = new LinkedList<String>();
+	protected List<T> getExistPojos(List<T> datas){
+		List<T> result = new LinkedList<T>();
 		if(datas.isEmpty()){
 			return result;
 		}
 		// 首先去重
-		Set<Object> onlyDatas = new HashSet<Object>(datas);
-		HashSet<Object> cache = new HashSet<Object>();
+		Set<T> onlyDatas = new HashSet<T>(datas);
+		List<T> cache = new LinkedList<T>();
 		// ORACLE的IN条件最大值为1000
 		int cacheMaxSize = 1000;
-		for (Object data : onlyDatas) {
+		for (T data : onlyDatas) {
 			cache.add(data);
 			if(cache.size() % cacheMaxSize == 0){
-				result.addAll(getExistKeys(cache));
+				result.addAll(getOnceExistPojos(cache));
 				cache.clear();
 			}
 		}
-		result.addAll(getExistKeys(cache));
+		result.addAll(getOnceExistPojos(cache));
 		return result;
 	}
 	
-	private List<String> getExistKeys(Collection<Object> datas){
-		List<String> result = new LinkedList<String>();
+	private List<T> getOnceExistPojos(List<T> datas){
+		LinkedList<T> result = new LinkedList<T>();
 		if(datas.isEmpty()){
-			return result;
+			return new LinkedList<T>();
 		}
-		Iterator<Object> iterator = datas.iterator();
-		Object check = iterator.next();
-		String condition = "";
-		if(check != null && check instanceof String){
-			condition = toInList(datas);
+		if(datas.get(0).getExistArray().length == 1){
+			Set<Object> keys = new HashSet<Object>();
+			for (T data : datas) {
+				keys.add(data.getExistArray()[0]);
+			}
+			String inCondition = toInList(keys);
+			String sql = exist.replace("= ?", "") + " IN (" + inCondition + ")";
+			result.addAll(query(sql));
 		} else {
-			condition = toNumbericInList(datas);
+			for (T pojo : datas) {
+				result.addAll(query(exist, pojo.getExistArray()));
+			}
 		}
-		String sql = "SELECT " + idColumnName + " FROM " + tableName 
-				+ " WHERE " + idColumnName +  " IN (" + condition + ")";
-		List<T> pojos = query(sql);
-		for (T pojo : pojos) {
-			Object idValue = getIdValue(pojo);
-			result.add(idValue == null ? "" : idValue.toString());
-		}
+		
 		return result;
 	}
 	
@@ -241,18 +248,30 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		delete(deleteById, new Object[]{idValue});
 	}
 	
-	protected String toInList(Collection<Object> datas){
+	protected String toInList(Collection<?> datas){
 		StringBuilder sb = new StringBuilder();
+		boolean isString = false;
 		for (Object data : datas) {
-			sb.append("'").append(data).append("'").append(",");
+			if(data instanceof String){
+				isString = true;
+			}
+			break;
 		}
-		if(sb.length() > 1){
-			sb.delete(sb.length() - 1, sb.length());
+		if(isString){
+			for (Object data : datas) {
+				sb.append("'").append(data).append("'").append(",");
+			}
+			if(sb.length() > 1){
+				sb.delete(sb.length() - 1, sb.length());
+			}
+			return "".equals(sb.toString()) ? "' '" : sb.toString();
+			
+		} else {
+			return toNumbericInList(datas);
 		}
-		return "".equals(sb.toString()) ? "' '" : sb.toString();
 	}
 	
-	protected String toNumbericInList(Collection<Object> datas){
+	private String toNumbericInList(Collection<?> datas){
 		StringBuilder sb = new StringBuilder();
 		for (Object data : datas) {
 			sb.append(data).append(",");

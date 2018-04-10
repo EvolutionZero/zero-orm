@@ -15,7 +15,9 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,38 +285,83 @@ public abstract class PojoBaseBean {
 		
 	}
 	
-	
 	public String getExistSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
+		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
+		List<String> uniqueColumnNames = new LinkedList<String>();
+		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
+			String[] columnNames = uniqueConstraint.columnNames();
+			for (String columnName : columnNames) {
+				uniqueColumnNames.add(columnName);
+			}
+		}
 		String tableName = tableAnnotation.name();
-		List<String> columnNames = new LinkedList<String>();
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT ");
+		for (String columnName : uniqueColumnNames) {
+			sql.append(columnName).append(",");
+		}
+		if(sql.length() > 0){
+			sql.delete(sql.length() - 1, sql.length());
+		}
+		sql.append(" FROM ").append(tableName).append(" WHERE ");
+		for (String columnName : uniqueColumnNames) {
+			sql.append(columnName).append(" = ?,");
+		}
+		if(sql.length() > 0){
+			sql.delete(sql.length() - 1, sql.length());
+		}
+		return sql.toString();
+		
+	}
+	
+	public List<Object> getExistList(){
+		List<Object> list = new LinkedList<Object>();
+		Object[] paramArray = getExistArray();
+		for (Object object : paramArray) {
+			list.add(object);
+		}
+		return list;
+	}
+	
+	public String getExistMD5(){
+		StringBuilder sb = new StringBuilder();
+		Object[] existArray = getExistArray();
+		for (int i = 0; i < existArray.length; i++) {
+			sb.append(existArray[i]).append("|");
+		}
+		return DigestUtils.md5Hex(sb.toString());
+	}
+	
+	public Object[] getExistArray(){
+		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
+		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
+		List<String> uniqueColumnNames = new LinkedList<String>();
+		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
+			String[] columnNames = uniqueConstraint.columnNames();
+			for (String columnName : columnNames) {
+				uniqueColumnNames.add(columnName);
+			}
+		}
+		Object[] params  = new Object[uniqueColumnNames.size()];
 		Field[] declaredFields = this.getClass().getDeclaredFields();
-		Field idField = null;
+		int idx = 0;
 		for (Field field : declaredFields) {
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
 				if(annotation instanceof Column){
 					Column column = (Column)annotation;
-					String columnName = column.name();
-					columnNames.add(columnName);
-				}
-				if(annotation instanceof Id){
-					idField = field;
+					if(uniqueColumnNames.contains(column.name())){
+						Object value = getValue(field);
+						params[idx++] = value;
+					}
 				}
 			}
 		}
-		StringBuilder sql = new StringBuilder();
-		if(idField != null){
-			Column column = idField.getDeclaredAnnotation(Column.class);
-			if(column != null){
-				String idColumnName = column.name();
-				sql.append(" SELECT ").append(idColumnName).append(" FROM ").append(tableName).append(" WHERE ")
-				.append(idColumnName);
-			}
-		}
-		return sql.toString();
+		return params;
 		
 	}
+	
 	
 	/* (non-Javadoc)
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamList()
@@ -361,26 +408,7 @@ public abstract class PojoBaseBean {
 		Object[] params = new Object[columnField.size()];
 		int idx = 0;
 		for (Field field : columnField) {
-			PropertyDescriptor pd;
-			try {
-				pd = new PropertyDescriptor(
-						field.getName(), this.getClass());
-				Method getMethod = pd.getReadMethod();// 获得get方法
-				Object param = getMethod.invoke(this);
-				params[idx++] = param;
-			} catch (IntrospectionException e) {
-				LOG.error("", e);
-				
-			} catch (IllegalAccessException e) {
-				LOG.error("", e);
-				
-			} catch (IllegalArgumentException e) {
-				LOG.error("", e);
-				
-			} catch (InvocationTargetException e) {
-				LOG.error("", e);
-				
-			}
+			params[idx++] = getValue(field);
 		}
 		return params;
 	}
@@ -419,46 +447,9 @@ public abstract class PojoBaseBean {
 		Object[] params = new Object[columnField.size() + 1];
 		int idx = 0;
 		for (Field field : columnField) {
-			PropertyDescriptor pd;
-			try {
-				pd = new PropertyDescriptor(
-						field.getName(), this.getClass());
-				Method getMethod = pd.getReadMethod();// 获得get方法
-				Object param = getMethod.invoke(this);
-				params[idx++] = param;
-			} catch (IntrospectionException e) {
-				LOG.error("", e);
-				
-			} catch (IllegalAccessException e) {
-				LOG.error("", e);
-				
-			} catch (IllegalArgumentException e) {
-				LOG.error("", e);
-				
-			} catch (InvocationTargetException e) {
-				LOG.error("", e);
-				
-			}
+			params[idx++] = getValue(field);
 		}
-		try {
-			PropertyDescriptor pd = new PropertyDescriptor(
-					idField.getName(), this.getClass());
-			Method getMethod = pd.getReadMethod();// 获得get方法
-			Object id = getMethod.invoke(this);
-			params[columnField.size()] = id;
-		} catch (IntrospectionException e) {
-			LOG.error("", e);
-			
-		} catch (IllegalAccessException e) {
-			LOG.error("", e);
-			
-		} catch (IllegalArgumentException e) {
-			LOG.error("", e);
-			
-		} catch (InvocationTargetException e) {
-			LOG.error("", e);
-			
-		}
+		params[columnField.size()] = getValue(idField);
 		return params;
 	}
 	
@@ -494,26 +485,27 @@ public abstract class PojoBaseBean {
 			}
 		}
 		Object[] params = new Object[1];
+		params[0] = getValue(idField);
+		return params;
+	}
+	
+	private Object getValue(Field field){
+		Object value = null;
 		try {
 			PropertyDescriptor pd = new PropertyDescriptor(
-					idField.getName(), this.getClass());
+					field.getName(), this.getClass());
 			Method getMethod = pd.getReadMethod();// 获得get方法
-			Object id = getMethod.invoke(this);
-			params[0] = id;
-		} catch (IntrospectionException e) {
-			LOG.error("", e);
-			
+			value = getMethod.invoke(this);
 		} catch (IllegalAccessException e) {
 			LOG.error("", e);
-			
 		} catch (IllegalArgumentException e) {
 			LOG.error("", e);
-			
 		} catch (InvocationTargetException e) {
 			LOG.error("", e);
-			
+		} catch (IntrospectionException e) {
+			LOG.error("", e);
 		}
-		return params;
+		return value;
 	}
 	
 }

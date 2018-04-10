@@ -8,6 +8,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -16,7 +17,7 @@ import lombok.ToString;
 import com.zero.orm.core.PojoBaseBean;
 
 @ToString
-@Table(name="t_code")
+@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
 public class Stock extends PojoBaseBean{
 
 	public Stock(){
