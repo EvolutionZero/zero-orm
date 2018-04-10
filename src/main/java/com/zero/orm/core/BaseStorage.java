@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -17,8 +18,13 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import org.apache.commons.dbutils.DbUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+enum Database{
+	MYSQL, ORACLE;
+}
 
 public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<T>{
 
@@ -33,6 +39,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	protected String save;
 	protected String updateById;
 	protected String deleteById;
+	
 	
 	public abstract Connection getConnection();
 	
@@ -62,6 +69,20 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				if(idField != null){
 					Column column = idField.getDeclaredAnnotation(Column.class);
 					idColumnName = column.name();
+				}
+				
+				Connection connection = getConnection();
+				try {
+					String databaseProductName = connection.getMetaData().getDatabaseProductName();
+					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
+						save = save.replace("#timestamp#", "now()");
+					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
+						save = save.replace("#timestamp#", "sysdate");
+					}
+				} catch (SQLException e1) {
+					LOG.error("", e1);
+				} finally {
+					DbUtils.closeQuietly(connection);
 				}
 			} catch (InstantiationException e) {
 				LOG.error("", e);
@@ -283,4 +304,3 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	}
 	
 }
-

@@ -111,6 +111,7 @@ public abstract class PojoBaseBean {
 			String columnName = "";
 			boolean isId = false;
 			boolean isIdentityStrategy = false;
+			boolean isUseDbTime = false;
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
 				if(annotation instanceof Id){
@@ -125,12 +126,22 @@ public abstract class PojoBaseBean {
 				if(annotation instanceof Column){
 					Column column = (Column)annotation;
 					columnName = column.name();
+					String columnDefinition = column.columnDefinition();
+					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+							|| columnDefinition.toUpperCase().contains("SYSDATE")){
+						isUseDbTime = true;
+					}
 				}
 			}
 			if(!(isId == true && isIdentityStrategy == true)){
 				columnNames.add(columnName);
 				sql.append(columnName).append(",");
-				values.append("?,");
+				
+				if(isUseDbTime){
+					values.append("#timestamp#,");
+				} else {
+					values.append("?,");
+				}
 			}
 		}
 		if(sql.toString().endsWith(",")){
@@ -435,6 +446,7 @@ public abstract class PojoBaseBean {
 			boolean isId = false;
 			boolean isIdentityStrategy = false;
 			boolean isColumn = false;
+			boolean isUseDbTime = false;
 			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
 			for (Annotation annotation : declaredAnnotations) {
 				if(annotation instanceof Id){
@@ -448,10 +460,18 @@ public abstract class PojoBaseBean {
 				}
 				if(annotation instanceof Column){
 					isColumn = true;
+					Column column = (Column)annotation;
+					String columnDefinition = column.columnDefinition();
+					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+							|| columnDefinition.toUpperCase().contains("SYSDATE")){
+						isUseDbTime = true;
+					}
 				}
 			}
 			if(isColumn && !(isId == true && isIdentityStrategy == true)){
-				columnField.add(field);
+				if(!isUseDbTime){
+					columnField.add(field);
+				}
 			}
 		}
 		Object[] params = new Object[columnField.size()];
