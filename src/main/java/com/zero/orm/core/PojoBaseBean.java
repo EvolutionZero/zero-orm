@@ -21,7 +21,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public abstract class PojoBaseBean {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(PojoBaseBean.class);
@@ -45,7 +44,28 @@ public abstract class PojoBaseBean {
 						Method writeMethod = pd.getWriteMethod();
 						writeMethod.invoke(this, value);
 					} catch (IntrospectionException e) {
-						LOG.error("", e);
+						String message = e.getMessage();
+						if(message.contains("Method not found:")){
+							String searchGetterName = "set" + message
+									.replace("Method not found:", "").trim().substring(2);
+							Method[] declaredMethods = this.getClass().getDeclaredMethods();
+							for (Method method : declaredMethods) {
+								if(searchGetterName.equalsIgnoreCase(method.getName())){
+									try {
+										method.invoke(this, value);
+									} catch (IllegalAccessException e1) {
+										LOG.error("", e);
+									} catch (IllegalArgumentException e1) {
+										LOG.error("", e);
+									} catch (InvocationTargetException e1) {
+										LOG.error("", e);
+									}
+								}
+							}
+						} else {
+							LOG.error("", e);
+							
+						}
 						
 					} catch (IllegalAccessException e) {
 						LOG.error("", e);
@@ -590,16 +610,31 @@ public abstract class PojoBaseBean {
 			LOG.error("", e);
 		} catch (IntrospectionException e) {
 			String message = e.getMessage();
-			// 不用lombok可能会报getter方法找不到 例如 java.beans.IntrospectionException: Method not found: isAPwId
 			if(message.contains("Method not found:")){
-				String searchGetterName = message
-						.replace("Method not found:", "").trim()
-						.replace("is", "get");
 				Method[] declaredMethods = this.getClass().getDeclaredMethods();
+				String searchGetterName = message
+						.replace("Method not found:", "").trim();
 				for (Method method : declaredMethods) {
 					if(searchGetterName.equalsIgnoreCase(method.getName())){
 						try {
 							value = method.invoke(this);
+							return value;
+						} catch (IllegalAccessException e1) {
+							LOG.error("", e);
+						} catch (IllegalArgumentException e1) {
+							LOG.error("", e);
+						} catch (InvocationTargetException e1) {
+							LOG.error("", e);
+						}
+					}
+				}
+				searchGetterName = "get" + message
+						.replace("Method not found:", "").trim().substring(2);
+				for (Method method : declaredMethods) {
+					if(searchGetterName.equalsIgnoreCase(method.getName())){
+						try {
+							value = method.invoke(this);
+							return value;
 						} catch (IllegalAccessException e1) {
 							LOG.error("", e);
 						} catch (IllegalArgumentException e1) {

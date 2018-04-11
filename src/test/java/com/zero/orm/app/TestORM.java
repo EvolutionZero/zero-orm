@@ -75,11 +75,11 @@ public class TestORM {
 		
 //		stockStorage.saveUnique(list);
 //		
-//		String sql = stock.getQuerySql() + " WHERE CODE = ?";
-//		for (int i = 0; i < 10; i++) {
-//			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
-//			
-//		}
+		String sql = stock.getQuerySql() + " WHERE CODE = ?";
+		for (int i = 0; i < 10; i++) {
+			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
+			
+		}
 	}
 
 }
