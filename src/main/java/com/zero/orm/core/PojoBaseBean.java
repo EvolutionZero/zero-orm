@@ -589,7 +589,30 @@ public abstract class PojoBaseBean {
 		} catch (InvocationTargetException e) {
 			LOG.error("", e);
 		} catch (IntrospectionException e) {
-			LOG.error("", e);
+			String message = e.getMessage();
+			// 不用lombok可能会报getter方法找不到 例如 java.beans.IntrospectionException: Method not found: isAPwId
+			if(message.contains("Method not found:")){
+				String searchGetterName = message
+						.replace("Method not found:", "").trim()
+						.replace("is", "get");
+				Method[] declaredMethods = this.getClass().getDeclaredMethods();
+				for (Method method : declaredMethods) {
+					if(searchGetterName.equalsIgnoreCase(method.getName())){
+						try {
+							value = method.invoke(this);
+						} catch (IllegalAccessException e1) {
+							LOG.error("", e);
+						} catch (IllegalArgumentException e1) {
+							LOG.error("", e);
+						} catch (InvocationTargetException e1) {
+							LOG.error("", e);
+						}
+					}
+				}
+			} else {
+				LOG.error("", e);
+				
+			}
 		}
 		return value;
 	}
