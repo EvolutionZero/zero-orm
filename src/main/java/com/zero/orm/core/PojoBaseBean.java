@@ -14,6 +14,7 @@ import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -45,6 +46,7 @@ public abstract class PojoBaseBean {
 						writeMethod.invoke(this, value);
 					} catch (IntrospectionException e) {
 						String message = e.getMessage();
+						// java.beans.IntrospectionException: Method not found: isAPir
 						if(message.contains("Method not found:")){
 							String searchGetterName = "set" + message
 									.replace("Method not found:", "").trim().substring(2);
@@ -118,64 +120,19 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getSaveSql()
 	 */
 	
-	public String getSaveSql(){
-		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		String tableName = tableAnnotation.name();
-		
-		List<String> columnNames = new LinkedList<String>();
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		StringBuilder sql = new StringBuilder("INSERT INTO ");
-		sql.append(tableName).append("(");
-		StringBuilder values = new StringBuilder();
-		for (Field field : declaredFields) {
-			String columnName = "";
-			boolean isId = false;
-			boolean isIdentityStrategy = false;
-			boolean isUseDbTime = false;
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof GeneratedValue){
-					GeneratedValue generatedValue = (GeneratedValue)annotation;
-					if(generatedValue.strategy() == GenerationType.IDENTITY){
-						isIdentityStrategy = true;
-					}
-				}
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					columnName = column.name();
-					String columnDefinition = column.columnDefinition();
-					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
-							|| columnDefinition.toUpperCase().contains("SYSDATE")){
-						isUseDbTime = true;
-					}
-				}
-			}
-			if(!(isId == true && isIdentityStrategy == true)){
-				columnNames.add(columnName);
-				sql.append(columnName).append(",");
-				
-				if(isUseDbTime){
-					values.append("#timestamp#,");
-				} else {
-					values.append("?,");
-				}
-			}
-		}
-		if(sql.toString().endsWith(",")){
-			sql.delete(sql.length() - 1, sql.length());
-			values.delete(values.length() - 1, values.length());
-		}
-		sql.append(") VALUES (").append(values).append(")");
-		return sql.toString();
-		
-	}
 	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateSql()
-	 */
+	private String getSequenceName(String generator, Annotation[] declaredAnnotations){
+		String sequenceName = "";
+		for (Annotation annotation : declaredAnnotations) {
+			if(annotation instanceof SequenceGenerator){
+				SequenceGenerator sequenceGenerator = (SequenceGenerator)annotation;
+				if(sequenceGenerator.name() != null && sequenceGenerator.name().equals(generator)){
+					sequenceName = sequenceGenerator.sequenceName();
+				}
+			}
+		}
+		return sequenceName;
+	}
 	
 	public String getUpdateSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
@@ -459,10 +416,78 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamArray()
 	 */
 	
+	public String getSaveSql(){
+		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
+		String tableName = tableAnnotation.name();
+		
+		Field[] declaredFields = this.getClass().getDeclaredFields();
+		StringBuilder sql = new StringBuilder("INSERT INTO ");
+		sql.append(tableName).append("(");
+		StringBuilder values = new StringBuilder();
+		for (Field field : declaredFields) {
+			String columnName = "";
+			boolean isId = false;
+			boolean isIdentityStrategy = false;
+			boolean isSequenceStrategy = false;
+			boolean isUseDbTime = false;
+			String sequenceName = "";
+			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Id){
+					isId = true;
+				}
+				if(annotation instanceof GeneratedValue){
+					GeneratedValue generatedValue = (GeneratedValue)annotation;
+					if(generatedValue.strategy() == GenerationType.IDENTITY){
+						isIdentityStrategy = true;
+					}
+					if(generatedValue.strategy() == GenerationType.SEQUENCE){
+						String generator = generatedValue.generator();
+						sequenceName = getSequenceName(generator, declaredAnnotations);
+						isSequenceStrategy = true;
+					}
+				}
+				if(annotation instanceof Column){
+					Column column = (Column)annotation;
+					columnName = column.name();
+					String columnDefinition = column.columnDefinition();
+					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+							|| columnDefinition.toUpperCase().contains("SYSDATE")){
+						isUseDbTime = true;
+					}
+				}
+			}
+			if(isId && !isIdentityStrategy){
+				if(isSequenceStrategy){
+					sql.append(columnName).append(",");
+					values.append(sequenceName).append(".NEXTVAL,");
+					
+				}
+				
+			} else {
+				sql.append(columnName).append(",");
+				
+				if(isUseDbTime){
+					values.append("#timestamp#,");
+				} else {
+					values.append("?,");
+				}
+			}
+		}
+		if(sql.toString().endsWith(",")){
+			sql.delete(sql.length() - 1, sql.length());
+			values.delete(values.length() - 1, values.length());
+		}
+		sql.append(") VALUES (").append(values).append(")");
+		return sql.toString();
+		
+	}
+	
 	public Object[] getSaveArray(){
 		List<Field> columnField = new LinkedList<Field>();
 		for (Field field : this.getClass().getDeclaredFields()) {
 			boolean isId = false;
+			boolean isSequenceStrategy = false;
 			boolean isIdentityStrategy = false;
 			boolean isColumn = false;
 			boolean isUseDbTime = false;
@@ -476,6 +501,9 @@ public abstract class PojoBaseBean {
 					if(generatedValue.strategy() == GenerationType.IDENTITY){
 						isIdentityStrategy = true;
 					}
+					if(generatedValue.strategy() == GenerationType.SEQUENCE){
+						isSequenceStrategy = true;
+					}
 				}
 				if(annotation instanceof Column){
 					isColumn = true;
@@ -487,10 +515,12 @@ public abstract class PojoBaseBean {
 					}
 				}
 			}
-			if(isColumn && !(isId == true && isIdentityStrategy == true)){
-				if(!isUseDbTime){
-					columnField.add(field);
-				}
+			if(isColumn && !isId  && !isUseDbTime){
+				columnField.add(field);
+				
+			} else if(isColumn && isId && !isIdentityStrategy && !isSequenceStrategy){
+				columnField.add(field);
+				
 			}
 		}
 		Object[] params = new Object[columnField.size()];
@@ -610,6 +640,7 @@ public abstract class PojoBaseBean {
 			LOG.error("", e);
 		} catch (IntrospectionException e) {
 			String message = e.getMessage();
+			// java.beans.IntrospectionException: Method not found: isAPir
 			if(message.contains("Method not found:")){
 				Method[] declaredMethods = this.getClass().getDeclaredMethods();
 				String searchGetterName = message

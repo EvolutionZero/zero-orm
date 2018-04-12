@@ -43,12 +43,12 @@ public class TestORM {
 		stock.setLocation("C");
 		stock.setPlate("深圳A股");
 //		System.out.println(stock.getQuerySql());
-//		System.out.println(stock.getSaveSql());
+		System.out.println(stock.getSaveSql());
+		System.out.println(stock.getParamList());
 //		System.out.println(stock.getUpdateSql());
 //		System.out.println(stock.getUpdateSqlById());
 //		System.out.println(stock.getDeleteSql());
 //		System.out.println(stock.getDeleteByIdSql());
-//		System.out.println(stock.getParamList());
 //		System.out.println(stock.getUpdateByIdList());
 //		System.out.println(stock.getDeleteByIdList());
 //		System.out.println(stock.getExistSql());
@@ -71,15 +71,15 @@ public class TestORM {
 		list.add(stock);
 		list.add(stock2);
 		
-		stockStorage.saveOrUpdate(stock2);
+//		stockStorage.saveOrUpdate(stock2);
 		
 //		stockStorage.saveUnique(list);
 //		
-		String sql = stock.getQuerySql() + " WHERE CODE = ?";
-		for (int i = 0; i < 10; i++) {
-			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
-			
-		}
+//		String sql = stock.getQuerySql() + " WHERE CODE = ?";
+//		for (int i = 0; i < 10; i++) {
+//			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
+//			
+//		}
 	}
 
 }
