@@ -75,11 +75,14 @@ public class TestORM {
 		
 //		stockStorage.saveUnique(list);
 //		
-//		String sql = stock.getQuerySql() + " WHERE CODE = ?";
-//		for (int i = 0; i < 10; i++) {
-//			System.out.println(stockStorage.query(sql, new Object[]{"sh600000"}));
-//			
-//		}
+		String sql = stock.getQuerySql() + " WHERE CODE = ?";
+		int querySize = 1000;
+		long start = System.currentTimeMillis();
+		for (int i = 0; i < querySize; i++) {
+			stockStorage.query(sql, new Object[]{"sh600000"});
+			
+		}
+		System.out.println("平均耗时：" + (System.currentTimeMillis() - start) / querySize);
 	}
 
 }

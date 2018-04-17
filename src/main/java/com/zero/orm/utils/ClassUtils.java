@@ -58,9 +58,9 @@ public class ClassUtils {
 			for (URI uri : uris) {
 				String path = new File(uri).getPath();
 				if(path.contains("jar")){
-					clazzs = loadFromJar(path);
+					clazzs.addAll(loadFromJar(path));
 				} else {
-					clazzs = loadFromDir(path, path);
+					clazzs.addAll(loadFromDir(path, path));
 				}
 			}
 		} catch (IOException e) {

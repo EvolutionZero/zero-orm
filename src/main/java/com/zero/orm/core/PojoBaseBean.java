@@ -1,7 +1,5 @@
 package com.zero.orm.core;
 
-import java.beans.IntrospectionException;
-import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +7,7 @@ import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
@@ -30,56 +29,22 @@ public abstract class PojoBaseBean {
 	}
 	
 	public PojoBaseBean(Map<String, Object> resultSet){
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					String columnName = column.name();
-					Object value = resultSet.get(columnName) == null ? null : resultSet.get(columnName);
-					PropertyDescriptor pd;
-					try {
-						pd = new PropertyDescriptor(
-								field.getName(), this.getClass());
-						Method writeMethod = pd.getWriteMethod();
-						writeMethod.invoke(this, value);
-					} catch (IntrospectionException e) {
-						String message = e.getMessage();
-						// java.beans.IntrospectionException: Method not found: isAPir
-						if(message.contains("Method not found:")){
-							String searchGetterName = "set" + message
-									.replace("Method not found:", "").trim().substring(2);
-							Method[] declaredMethods = this.getClass().getDeclaredMethods();
-							for (Method method : declaredMethods) {
-								if(searchGetterName.equalsIgnoreCase(method.getName())){
-									try {
-										method.invoke(this, value);
-									} catch (IllegalAccessException e1) {
-										LOG.error("", e);
-									} catch (IllegalArgumentException e1) {
-										LOG.error("", e);
-									} catch (InvocationTargetException e1) {
-										LOG.error("", e);
-									}
-								}
-							}
-						} else {
-							LOG.error("", e);
-							
-						}
-						
-					} catch (IllegalAccessException e) {
-						LOG.error("", e);
-						
-					} catch (IllegalArgumentException e) {
-						LOG.error("", e);
-						
-					} catch (InvocationTargetException e) {
-						LOG.error("", e);
-						
-					}
-				}
+		Map<Field, Method> setterMap = ClassStructCache.FIELD_SETTER_MAPPING.get(getClass());
+		Map<String, Field> columnNameFieldMap = ClassStructCache.getColumnNameFieldMap(getClass());
+		for (Entry<String,Field> entry : columnNameFieldMap.entrySet()) {
+			String columnName = entry.getKey();
+			Field field = entry.getValue();
+			
+			Object value = resultSet.get(columnName) == null ? null : resultSet.get(columnName);
+			Method setter = setterMap.get(field);
+			try {
+				setter.invoke(this, value);
+			} catch (IllegalAccessException e) {
+				LOG.error("", e);
+			} catch (IllegalArgumentException e) {
+				LOG.error("", e);
+			} catch (InvocationTargetException e) {
+				LOG.error("", e);
 			}
 		}
 	}
@@ -626,59 +591,17 @@ public abstract class PojoBaseBean {
 	}
 	
 	private Object getValue(Field field){
+		Map<Field, Method> getter = ClassStructCache.FIELD_GETTER_MAPPING.get(getClass());
 		Object value = null;
 		try {
-			PropertyDescriptor pd = new PropertyDescriptor(
-					field.getName(), this.getClass());
-			Method getMethod = pd.getReadMethod();// 获得get方法
-			value = getMethod.invoke(this);
+			Method method = getter.get(field);
+			value = method.invoke(this);
 		} catch (IllegalAccessException e) {
 			LOG.error("", e);
 		} catch (IllegalArgumentException e) {
 			LOG.error("", e);
 		} catch (InvocationTargetException e) {
 			LOG.error("", e);
-		} catch (IntrospectionException e) {
-			String message = e.getMessage();
-			// java.beans.IntrospectionException: Method not found: isAPir
-			if(message.contains("Method not found:")){
-				Method[] declaredMethods = this.getClass().getDeclaredMethods();
-				String searchGetterName = message
-						.replace("Method not found:", "").trim();
-				for (Method method : declaredMethods) {
-					if(searchGetterName.equalsIgnoreCase(method.getName())){
-						try {
-							value = method.invoke(this);
-							return value;
-						} catch (IllegalAccessException e1) {
-							LOG.error("", e);
-						} catch (IllegalArgumentException e1) {
-							LOG.error("", e);
-						} catch (InvocationTargetException e1) {
-							LOG.error("", e);
-						}
-					}
-				}
-				searchGetterName = "get" + message
-						.replace("Method not found:", "").trim().substring(2);
-				for (Method method : declaredMethods) {
-					if(searchGetterName.equalsIgnoreCase(method.getName())){
-						try {
-							value = method.invoke(this);
-							return value;
-						} catch (IllegalAccessException e1) {
-							LOG.error("", e);
-						} catch (IllegalArgumentException e1) {
-							LOG.error("", e);
-						} catch (InvocationTargetException e1) {
-							LOG.error("", e);
-						}
-					}
-				}
-			} else {
-				LOG.error("", e);
-				
-			}
 		}
 		return value;
 	}
