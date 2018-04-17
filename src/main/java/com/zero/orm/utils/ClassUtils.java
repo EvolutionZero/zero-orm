@@ -20,9 +20,22 @@ public class ClassUtils {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ClassUtils.class);
 	
+	public static String searchJarPath(Class<?> clazz){
+		URL location = clazz.getProtectionDomain().getCodeSource().getLocation();
+		if(location == null){
+			return null;
+		}
+		try {
+			return location.toURI().getPath();
+		} catch (URISyntaxException e) {
+			LOG.error("", e);
+		}
+		return null;
+	}
+	
 	public static List<Class<?>> findSubClass(Class<?> father){
 		List<Class<?>> result = new LinkedList<Class<?>>();
-		List<Class<?>> allClazz = getAllClass(father);
+		List<Class<?>> allClazz = getAllClass();
 		for (Class<?> clazz : allClazz) {
 			if(clazz != father && father.isAssignableFrom(clazz)){
 				result.add(clazz);
@@ -31,33 +44,30 @@ public class ClassUtils {
 		return result;
 	}
 	
-	public static List<Class<?>> getAllClass(Class<?> clazz){
+	public static List<Class<?>> getAllClass(){
 		List<Class<?>> clazzs = new LinkedList<Class<?>>();
 		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-			try {
-				Enumeration<URL> resources = contextClassLoader.getResources("./");
-				List<URI> uris = new LinkedList<URI>();
-				while(resources.hasMoreElements()){
-					URL resource = resources.nextElement();
-				    URI uri = resource.toURI();  
-				    if(uri.toString().contains("jar!")){
-				    	uri = clazz.getProtectionDomain().getCodeSource().getLocation().toURI(); 
-				    }
-				    uris.add(uri);
-				}
-				for (URI uri : uris) {
-					String path = new File(uri).getPath();
-					if(path.contains("jar")){
-						clazzs = loadFromJar(path);
-					} else {
-						clazzs = loadFromDir(path, path);
-					}
-				}
-			} catch (IOException e) {
-				LOG.error("", e);
-			} catch (URISyntaxException e) {
-				LOG.error("", e);
+		try {
+			Enumeration<URL> resources = contextClassLoader.getResources("./");
+			List<URI> uris = new LinkedList<URI>();
+			while(resources.hasMoreElements()){
+				URL resource = resources.nextElement();
+			    URI uri = resource.toURI();  
+			    uris.add(uri);
 			}
+			for (URI uri : uris) {
+				String path = new File(uri).getPath();
+				if(path.contains("jar")){
+					clazzs = loadFromJar(path);
+				} else {
+					clazzs = loadFromDir(path, path);
+				}
+			}
+		} catch (IOException e) {
+			LOG.error("", e);
+		} catch (URISyntaxException e) {
+			LOG.error("", e);
+		}
 		return clazzs;
 	}
 	
@@ -95,13 +105,15 @@ public class ClassUtils {
 			realJarPath = jarPath.substring(0, jarPath.indexOf("!"));
 		}
 		JarFile jarFile = null; 
+		String clazzName = null;
         try {
         	jarFile = new JarFile(new File(realJarPath));  
         	Enumeration<JarEntry> entries = jarFile.entries();
         	while(entries.hasMoreElements()){
         		JarEntry jarEntry = entries.nextElement();
         		if(jarEntry.getName().endsWith(".class")){
-					clazzs.add(Thread.currentThread().getContextClassLoader().loadClass(jarEntry.getName().replace("/", ".").replace(".class", "")));
+        			clazzName = jarEntry.getName().replace("/", ".").replace(".class", "");
+					clazzs.add(Thread.currentThread().getContextClassLoader().loadClass(clazzName));
 				}
         	}
 		} catch (FileNotFoundException e) {
