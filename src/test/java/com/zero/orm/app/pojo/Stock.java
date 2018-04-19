@@ -22,6 +22,7 @@ import com.zero.orm.core.PojoBaseBean;
 
 @ToString
 @Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
+//@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
 public class Stock extends PojoBaseBean{
 
 	public Stock(){
@@ -35,15 +36,24 @@ public class Stock extends PojoBaseBean{
 	@Getter
 	@Setter
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator="seqId")  
-	@SequenceGenerator(name="seqId", sequenceName="SEQ_ID") 
+	@GeneratedValue(strategy = GenerationType.IDENTITY)  
 	@Column(name="id")
 	private Integer id;
 	
+	@Id
 	@Getter
 	@Setter
 	@Column(name="code")
 	private String code;
+	
+	@Getter
+	@Setter
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator="seqId")  
+	@SequenceGenerator(name="seqId", sequenceName="SEQ_ID") 
+	@Column(name="seq")
+	private Integer seq;
+	
 	
 	@Getter
 	@Setter

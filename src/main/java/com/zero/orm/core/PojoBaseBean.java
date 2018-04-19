@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -85,19 +86,6 @@ public abstract class PojoBaseBean {
 	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getSaveSql()
 	 */
 	
-	
-	private String getSequenceName(String generator, Annotation[] declaredAnnotations){
-		String sequenceName = "";
-		for (Annotation annotation : declaredAnnotations) {
-			if(annotation instanceof SequenceGenerator){
-				SequenceGenerator sequenceGenerator = (SequenceGenerator)annotation;
-				if(sequenceGenerator.name() != null && sequenceGenerator.name().equals(generator)){
-					sequenceName = sequenceGenerator.sequenceName();
-				}
-			}
-		}
-		return sequenceName;
-	}
 	
 	public String getUpdateSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
@@ -385,56 +373,41 @@ public abstract class PojoBaseBean {
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
 		
-		Field[] declaredFields = this.getClass().getDeclaredFields();
 		StringBuilder sql = new StringBuilder("INSERT INTO ");
 		sql.append(tableName).append("(");
+		
+		Map<Column, Field> columnFieldIdMap = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(getClass());
+		Map<Column, Field> columnFieldMap = ClassStructCache.COLUMN_FIELD_MAPPING.get(getClass());
+		
 		StringBuilder values = new StringBuilder();
-		for (Field field : declaredFields) {
-			String columnName = "";
-			boolean isId = false;
-			boolean isIdentityStrategy = false;
-			boolean isSequenceStrategy = false;
-			boolean isUseDbTime = false;
-			String sequenceName = "";
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof GeneratedValue){
-					GeneratedValue generatedValue = (GeneratedValue)annotation;
-					if(generatedValue.strategy() == GenerationType.IDENTITY){
-						isIdentityStrategy = true;
-					}
-					if(generatedValue.strategy() == GenerationType.SEQUENCE){
-						String generator = generatedValue.generator();
-						sequenceName = getSequenceName(generator, declaredAnnotations);
-						isSequenceStrategy = true;
-					}
-				}
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					columnName = column.name();
-					String columnDefinition = column.columnDefinition();
-					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
-							|| columnDefinition.toUpperCase().contains("SYSDATE")){
-						isUseDbTime = true;
-					}
-				}
-			}
-			if(isId && !isIdentityStrategy){
-				if(isSequenceStrategy){
-					sql.append(columnName).append(",");
-					values.append(sequenceName).append(".NEXTVAL,");
-					
-				}
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			
+			if(isIdentity(field)){
+				
+			} else if(isSequence(field)){
+				sql.append(column.name()).append(",");
+				String sequenceName = getSequenceName(field);
+				values.append(sequenceName).append(".NEXTVAL,");
 				
 			} else {
-				sql.append(columnName).append(",");
-				
-				if(isUseDbTime){
+				sql.append(column.name()).append(",");
+				values.append("?,");
+			}
+		}
+		
+		Collection<Field> idFields = columnFieldIdMap.values();
+		for (Entry<Column,Field> entry : columnFieldMap.entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			
+			if(!idFields.contains(field)){
+				if(isUseDbTime(column)){
+					sql.append(column.name()).append(",");
 					values.append("#timestamp#,");
 				} else {
+					sql.append(column.name()).append(",");
 					values.append("?,");
 				}
 			}
@@ -450,42 +423,31 @@ public abstract class PojoBaseBean {
 	
 	public Object[] getSaveArray(){
 		List<Field> columnField = new LinkedList<Field>();
-		for (Field field : this.getClass().getDeclaredFields()) {
-			boolean isId = false;
-			boolean isSequenceStrategy = false;
-			boolean isIdentityStrategy = false;
-			boolean isColumn = false;
-			boolean isUseDbTime = false;
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof GeneratedValue){
-					GeneratedValue generatedValue = (GeneratedValue)annotation;
-					if(generatedValue.strategy() == GenerationType.IDENTITY){
-						isIdentityStrategy = true;
-					}
-					if(generatedValue.strategy() == GenerationType.SEQUENCE){
-						isSequenceStrategy = true;
-					}
-				}
-				if(annotation instanceof Column){
-					isColumn = true;
-					Column column = (Column)annotation;
-					String columnDefinition = column.columnDefinition();
-					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
-							|| columnDefinition.toUpperCase().contains("SYSDATE")){
-						isUseDbTime = true;
-					}
-				}
+		Map<Column, Field> columnFieldIdMap = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(getClass());
+		Map<Column, Field> columnFieldMap = ClassStructCache.COLUMN_FIELD_MAPPING.get(getClass());
+		
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			Field field = entry.getValue();
+			
+			if(isIdentity(field)){
+				
+			} else if(isSequence(field)){
+				
+			} else {
+				columnField.add(field);
 			}
-			if(isColumn && !isId  && !isUseDbTime){
-				columnField.add(field);
-				
-			} else if(isColumn && isId && !isIdentityStrategy && !isSequenceStrategy){
-				columnField.add(field);
-				
+		}
+		
+		Collection<Field> idFields = columnFieldIdMap.values();
+		for (Entry<Column,Field> entry : columnFieldMap.entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			
+			if(!idFields.contains(field)){
+				if(isUseDbTime(column)){
+				} else {
+					columnField.add(field);
+				}
 			}
 		}
 		Object[] params = new Object[columnField.size()];
@@ -604,6 +566,75 @@ public abstract class PojoBaseBean {
 			LOG.error("", e);
 		}
 		return value;
+	}
+	
+	private boolean isIdentity(Field field){
+		boolean isIdentityStrategy = false;
+		Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+		for (Annotation annotation : declaredAnnotations) {
+			if(annotation instanceof GeneratedValue){
+				GeneratedValue generatedValue = (GeneratedValue)annotation;
+				if(generatedValue.strategy() == GenerationType.IDENTITY){
+					isIdentityStrategy = true;
+					break;
+				}
+			}
+		}
+		return isIdentityStrategy;
+	}
+	
+	private boolean isSequence(Field field){
+		boolean isSequenceStrategy = false;
+		Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+		for (Annotation annotation : declaredAnnotations) {
+			if(annotation instanceof GeneratedValue){
+				GeneratedValue generatedValue = (GeneratedValue)annotation;
+				if(generatedValue.strategy() == GenerationType.SEQUENCE){
+					isSequenceStrategy = true;
+					break;
+				}
+			}
+		}
+		return isSequenceStrategy;
+	}
+	
+	private boolean isUseDbTime(Column column){
+		boolean isUseDbTime = false;
+		String columnDefinition = column.columnDefinition();
+		if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
+				|| columnDefinition.toUpperCase().contains("SYSDATE")){
+			isUseDbTime = true;
+		}
+		return isUseDbTime;
+	}
+	
+	private String getSequenceName(Field field){
+		String sequenceName = "";
+		Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+		for (Annotation annotation : declaredAnnotations) {
+			if(annotation instanceof GeneratedValue){
+				GeneratedValue generatedValue = (GeneratedValue)annotation;
+				if(generatedValue.strategy() == GenerationType.SEQUENCE){
+					String generator = generatedValue.generator();
+					sequenceName = getSequenceName(generator, declaredAnnotations);
+				}
+			}
+		}
+		return sequenceName;
+	}
+	
+	
+	private String getSequenceName(String generator, Annotation[] declaredAnnotations){
+		String sequenceName = "";
+		for (Annotation annotation : declaredAnnotations) {
+			if(annotation instanceof SequenceGenerator){
+				SequenceGenerator sequenceGenerator = (SequenceGenerator)annotation;
+				if(sequenceGenerator.name() != null && sequenceGenerator.name().equals(generator)){
+					sequenceName = sequenceGenerator.sequenceName();
+				}
+			}
+		}
+		return sequenceName;
 	}
 	
 }

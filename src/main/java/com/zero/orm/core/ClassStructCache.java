@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.persistence.Column;
+import javax.persistence.Id;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,12 +28,17 @@ public class ClassStructCache {
 	public static final Map<Class<?>, Map<Field, Method	>> FIELD_GETTER_MAPPING = new HashMap<>();
 	public static final Map<Class<?>, Map<Field, Method	>> FIELD_SETTER_MAPPING = new HashMap<>();
 	
+	public static final Map<Class<?>, Map<Column, Field>> COLUMN_FIELD_ID_MAPPING = new HashMap<>();
+	public static final Map<Class<?>, Map<Field, Column>> FIELD_COLUMN_ID_MAPPING = new HashMap<>();
+	
 	static{
 		List<Class<?>> subClazzs = ClassUtils.findSubClass(PojoBaseBean.class);
 		initColumnFieldMapping(subClazzs);
 		initFieldColumnMapping(subClazzs);
 		initFieldGetterMapping(subClazzs);
 		initFieldSetterMapping(subClazzs);
+		initColumnFieldIdMapping(subClazzs);
+		initFieldColumnIdMapping(subClazzs);
 	}
 
 	public static void main(String[] args) {
@@ -192,5 +198,67 @@ public class ClassStructCache {
 			result.put(column.name(), value);
 		}
 		return result;
+	}
+	
+	
+	private static void initColumnFieldIdMapping(List<Class<?>> clazzs){
+		for (Class<?> clazz : clazzs) {
+			COLUMN_FIELD_ID_MAPPING.put(clazz, genColumnFieldIdMap(clazz));
+			
+		}
+	}
+	
+	private static Map<Column, Field> genColumnFieldIdMap(Class<?> clazz){
+		Map<Column, Field> columnFieldIdMap = new HashMap<>();
+		Field[] declaredFields = clazz.getDeclaredFields();
+		
+		for (Field field : declaredFields) {
+			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			boolean isId = false;
+			Column column = null;
+			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Column){
+					column = (Column)annotation;
+				}
+				if(annotation instanceof Id){
+					isId = true;
+				}
+			}
+			if(isId && column != null){
+				columnFieldIdMap.put(column, field);
+			}
+		}
+		return columnFieldIdMap;
+	}
+	
+
+	private static void initFieldColumnIdMapping(List<Class<?>> clazzs){
+		for (Class<?> clazz : clazzs) {
+			FIELD_COLUMN_ID_MAPPING.put(clazz, genFieldColumnIdMap(clazz));
+			
+		}
+	}
+	
+	private static Map<Field, Column> genFieldColumnIdMap(Class<?> clazz){
+		Map<Field, Column> fieldColumnIdMap = new HashMap<>();
+		Field[] declaredFields = clazz.getDeclaredFields();
+		
+		for (Field field : declaredFields) {
+			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
+			boolean isId = false;
+			Column column = null;
+			for (Annotation annotation : declaredAnnotations) {
+				if(annotation instanceof Column){
+					column = (Column)annotation;
+				}
+				if(annotation instanceof Id){
+					isId = true;
+				}
+			}
+			if(isId && column != null){
+				fieldColumnIdMap.put(field, column);
+			}
+		}
+		return fieldColumnIdMap;
 	}
 }
