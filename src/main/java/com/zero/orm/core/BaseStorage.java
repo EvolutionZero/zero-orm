@@ -129,12 +129,12 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		List<T> existPojos = getExistPojos(datas);
 		List<String> dbKeys = new LinkedList<String>();
 		for (T pojo : existPojos) {
-			dbKeys.add(pojo.getUniqueConstraintsMD5());
+			dbKeys.add(pojo.getExistMD5());
 		}
 		
 		List<T> saveDatas = new LinkedList<T>();
 		for (T data : datas) {
-			if(!dbKeys.contains(data.getUniqueConstraintsMD5())){
+			if(!dbKeys.contains(data.getExistMD5())){
 				saveDatas.add(data);
 			}
 		}
@@ -163,13 +163,13 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		List<T> existPojos = getExistPojos(datas);
 		List<String> dbKeys = new LinkedList<String>();
 		for (T pojo : existPojos) {
-			dbKeys.add(pojo.getUniqueConstraintsMD5());
+			dbKeys.add(pojo.getExistMD5());
 		}
 		
 		List<T> saveDatas = new LinkedList<T>();
 		List<T> updateDatas = new LinkedList<T>();
 		for (T data : datas) {
-			if(dbKeys.contains(data.getUniqueConstraintsMD5())){
+			if(dbKeys.contains(data.getExistMD5())){
 				updateDatas.add(data);
 			} else {
 				saveDatas.add(data);
@@ -230,17 +230,17 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		if(datas.isEmpty()){
 			return new LinkedList<T>();
 		}
-		if(datas.get(0).getUniqueConstraintsArray().length == 1){
+		if(datas.get(0).getExistArray().length == 1){
 			Set<Object> keys = new HashSet<Object>();
 			for (T data : datas) {
-				keys.add(data.getUniqueConstraintsArray()[0]);
+				keys.add(data.getExistArray()[0]);
 			}
 			String inCondition = toInList(keys);
 			String sql = exist.replace("= ?", "") + " IN (" + inCondition + ")";
 			result.addAll(query(sql));
 		} else {
 			for (T pojo : datas) {
-				result.addAll(query(exist, pojo.getUniqueConstraintsArray()));
+				result.addAll(query(exist, pojo.getExistArray()));
 			}
 		}
 		

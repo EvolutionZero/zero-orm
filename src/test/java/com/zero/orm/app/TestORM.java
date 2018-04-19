@@ -45,13 +45,15 @@ public class TestORM {
 //		System.out.println(stock.getQuerySql());
 		System.out.println(stock.getSaveSql());
 		System.out.println(stock.getParamList());
-//		System.out.println(stock.getUpdateSql());
+		System.out.println(stock.getQuerySql());
 //		System.out.println(stock.getUpdateSqlById());
 //		System.out.println(stock.getDeleteSql());
-//		System.out.println(stock.getDeleteByIdSql());
+		System.out.println(stock.getDeleteByIdSql());
+		System.out.println(stock.getDeleteByIdList());
 //		System.out.println(stock.getUpdateByIdList());
 //		System.out.println(stock.getDeleteByIdList());
-//		System.out.println(stock.getExistSql());
+		System.out.println(stock.getExistSql());
+		System.out.println(stock.getExistList());
 //		System.out.println(stock.getUpdateSqlByUniqueConstraints());
 //		System.out.println(stock.getUpdateByUniqueConstraintsList());
 		

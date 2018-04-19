@@ -58,21 +58,9 @@ public abstract class PojoBaseBean {
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
 		
-		List<String> columnNames = new LinkedList<String>();
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					String columnName = column.name();
-					columnNames.add(columnName);
-				}
-			}
-		}
 		StringBuilder sql = new StringBuilder("SELECT ");
-		for (String columnName : columnNames) {
-			sql.append(columnName).append(",");
+		for (Column column : ClassStructCache.COLUMN_FIELD_MAPPING.get(getClass()).keySet()) {
+			sql.append(column.name()).append(",");
 		}
 		if(sql.toString().endsWith(",")){
 			sql.delete(sql.length() - 1, sql.length());
@@ -183,33 +171,23 @@ public abstract class PojoBaseBean {
 	
 	public String getDeleteByIdSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		String tableName = tableAnnotation.name();
-		List<String> columnNames = new LinkedList<String>();
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		Field idField = null;
-		for (Field field : declaredFields) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					String columnName = column.name();
-					columnNames.add(columnName);
-				}
-				if(annotation instanceof Id){
-					idField = field;
-				}
-			}
+		Map<Column, Field> columnFieldIdMap = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(getClass());
+		
+		StringBuilder sql = new StringBuilder("DELETE FROM ").append(tableAnnotation.name()).append(" WHERE ");
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			Column column = entry.getKey();
+			
+			sql.append(column.name()).append(" = ?").append(" AND ");
 		}
-		StringBuilder sql = new StringBuilder("DELETE FROM ").append(tableName);
-		if(idField != null){
-			Column column = idField.getDeclaredAnnotation(Column.class);
-			if(column != null){
-				String idColumnName = column.name();
-				sql.append(" WHERE ").append(idColumnName).append(" = ?");
-			}
+		if(sql.toString().endsWith(" AND ")){
+			sql.delete(sql.length() - " AND ".length(), sql.length());
 		}
 		return sql.toString();
 		
+	}
+	
+	public Object[] getDeleteByIdArray(){
+		return getIdParmaArray();
 	}
 	
 	/* (non-Javadoc)
@@ -227,46 +205,22 @@ public abstract class PojoBaseBean {
 	
 	public String getExistSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
-		List<String> uniqueColumnNames = new LinkedList<String>();
-		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
-			String[] columnNames = uniqueConstraint.columnNames();
-			for (String columnName : columnNames) {
-				uniqueColumnNames.add(columnName);
-			}
-		}
-		if(uniqueColumnNames.isEmpty()){
-			Field[] declaredFields = this.getClass().getDeclaredFields();
-			for (Field field : declaredFields) {
-				String columnName = "";
-				boolean isId = false;
-				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-				for (Annotation annotation : declaredAnnotations) {
-					if(annotation instanceof Id){
-						isId = true;
-					}
-					if(annotation instanceof Column){
-						Column column = (Column)annotation;
-						columnName = column.name();
-					}
-				}
-				if(isId && !"".equals(columnName)){
-					uniqueColumnNames.add(columnName);
-				}
-			}
-		}
+		Map<Column, Field> columnFieldIdMap = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(getClass());
+		
 		String tableName = tableAnnotation.name();
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ");
-		for (String columnName : uniqueColumnNames) {
-			sql.append(columnName).append(",");
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			Column column = entry.getKey();
+			sql.append(column.name()).append(",");
 		}
 		if(sql.length() > 0){
 			sql.delete(sql.length() - 1, sql.length());
 		}
 		sql.append(" FROM ").append(tableName).append(" WHERE ");
-		for (String columnName : uniqueColumnNames) {
-			sql.append(columnName).append(" = ? AND ");
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			Column column = entry.getKey();
+			sql.append(column.name()).append(" = ? AND ");
 		}
 		if(sql.length() > 0){
 			sql.delete(sql.length() - 4, sql.length());
@@ -277,78 +231,40 @@ public abstract class PojoBaseBean {
 	
 	public List<Object> getExistList(){
 		List<Object> list = new LinkedList<Object>();
-		Object[] paramArray = getUniqueConstraintsArray();
+		Object[] paramArray = getExistArray();
 		for (Object object : paramArray) {
 			list.add(object);
 		}
 		return list;
 	}
 	
-	public String getUniqueConstraintsMD5(){
+	public String getExistMD5(){
 		StringBuilder sb = new StringBuilder();
-		Object[] existArray = getUniqueConstraintsArray();
+		Object[] existArray = getExistArray();
 		for (int i = 0; i < existArray.length; i++) {
 			sb.append(existArray[i]).append("|");
 		}
 		return DigestUtils.md5Hex(sb.toString());
 	}
 	
-	public Object[] getUniqueConstraintsArray(){
-		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
-		List<String> uniqueColumnNames = new LinkedList<String>();
-		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
-			String[] columnNames = uniqueConstraint.columnNames();
-			for (String columnName : columnNames) {
-				uniqueColumnNames.add(columnName);
-			}
-		}
+	public Object[] getExistArray(){
+		return getIdParmaArray();
 		
-		Object[] params = new Object[]{};
-		if(uniqueColumnNames.isEmpty()){
-			Field[] declaredFields = this.getClass().getDeclaredFields();
-			for (Field field : declaredFields) {
-				String columnName = "";
-				boolean isId = false;
-				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-				for (Annotation annotation : declaredAnnotations) {
-					if(annotation instanceof Id){
-						isId = true;
-					}
-					if(annotation instanceof Column){
-						Column column = (Column)annotation;
-						columnName = column.name();
-					}
-				}
-				if(isId && !"".equals(columnName)){
-					params = new Object[]{getValue(field)};
-				}
-			}
-		} else {
-			params  = new Object[uniqueColumnNames.size()];
-			Field[] declaredFields = this.getClass().getDeclaredFields();
-			int idx = 0;
-			for (String uniqueColumnName : uniqueColumnNames) {
-				Field uniqueColumnField = null;
-				for (Field field : declaredFields) {
-					Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-					for (Annotation annotation : declaredAnnotations) {
-						if(annotation instanceof Column){
-							Column column = (Column)annotation;
-							if(column.name().equals(uniqueColumnName)){
-								uniqueColumnField = field;
-							}
-						}
-					}
-				}
-				if(uniqueColumnField != null){
-					params[idx++] = getValue(uniqueColumnField);
-				}
-			}
-			
+	}
+
+	private Object[] getIdParmaArray() {
+		List<Field> columnField = new LinkedList<Field>();
+		Map<Column, Field> columnFieldIdMap = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(getClass());
+		
+		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
+			columnField.add(entry.getValue());
+		}
+		Object[] params = new Object[columnField.size()];
+		int idx = 0;
+		for (Field field : columnField) {
+			params[idx++] = getValue(field);
 		}
 		return params;
-		
 	}
 	
 	
@@ -503,7 +419,7 @@ public abstract class PojoBaseBean {
 				}
 			}
 		}
-		Object[] uniqueConstraintsArray = getUniqueConstraintsArray();
+		Object[] uniqueConstraintsArray = getExistArray();
 		Object[] params = new Object[updateColumnField.size() + uniqueConstraintsArray.length]; 
 		for (int i = 0; i < updateColumnField.size(); i++) {
 			params[i] = getValue(updateColumnField.get(i));
@@ -529,28 +445,6 @@ public abstract class PojoBaseBean {
 		return list;
 	}
 	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteByIdArray()
-	 */
-	
-	public Object[] getDeleteByIdArray(){
-		List<Field> columnField = new LinkedList<Field>();
-		Field idField = null;
-		for (Field field : this.getClass().getDeclaredFields()) {
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Column){
-					columnField.add(field);
-				}
-				if(annotation instanceof Id){
-					idField = field;
-				}
-			}
-		}
-		Object[] params = new Object[1];
-		params[0] = getValue(idField);
-		return params;
-	}
 	
 	private Object getValue(Field field){
 		Map<Field, Method> getter = ClassStructCache.FIELD_GETTER_MAPPING.get(getClass());
