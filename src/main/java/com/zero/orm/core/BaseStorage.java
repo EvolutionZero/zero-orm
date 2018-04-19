@@ -12,6 +12,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.persistence.Column;
@@ -37,9 +39,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	protected String exist;
 	protected String query;
 	protected String save;
-	protected String updateByUniqueConstraints;
 	protected String deleteById;
-	
 	
 	public abstract Connection getConnection();
 	
@@ -64,7 +64,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				exist = bean.getExistSql();
 				query = bean.getQuerySql();
 				save = bean.getSaveSql();
-				updateByUniqueConstraints = bean.getUpdateSqlByUniqueConstraints();
 				deleteById = bean.getDeleteByIdSql();
 				if(idField != null){
 					Column column = idField.getDeclaredAnnotation(Column.class);
@@ -76,10 +75,8 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 					String databaseProductName = connection.getMetaData().getDatabaseProductName();
 					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
 						save = save.replace("#timestamp#", "now()");
-						updateByUniqueConstraints = updateByUniqueConstraints.replace("#timestamp#", "now()");
 					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
 						save = save.replace("#timestamp#", "sysdate");
-						updateByUniqueConstraints = updateByUniqueConstraints.replace("#timestamp#", "sysdate");
 					}
 				} catch (SQLException e1) {
 					LOG.error("", e1);
@@ -176,7 +173,9 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			}
 		}
 		insert(save, getSaveParams(saveDatas));
-		update(updateByUniqueConstraints, getUpdateByUniqueConstraintsParams(updateDatas));
+		for (T data : updateDatas) {
+			update(data);
+		}
 	}
 	
 	
@@ -195,13 +194,81 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		return params;
 	}
 	
-	protected Object[][] getUpdateByUniqueConstraintsParams(List<T> datas){
-		Object[][] params = new Object[datas.size()][];
-		int idx = 0;
-		for (T data : datas) {
-			params[idx++] = data.getUpdateByUniqueConstraintsArray();
+	public int update(T data){
+		Map<Column, Field> idColumnField = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(data.getClass());
+		Table tableAnnotation = data.getClass().getDeclaredAnnotation(Table.class);
+		String tableName = tableAnnotation.name();
+		StringBuilder sql = new StringBuilder();
+		List<Object> updateParams = new LinkedList<>();
+		sql.append("UPDATE ").append(tableName).append(" SET ");
+		for (Entry<Column,Field> entry : ClassStructCache.COLUMN_FIELD_MAPPING.get(data.getClass()).entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			
+			Object value = getValue(data, field);
+			if(value != null && column.updatable()){
+				sql.append(column.name()).append(" = ? ,");
+				updateParams.add(value);
+			}
 		}
-		return params;
+		if(sql.toString().length() > 1){
+			sql.delete(sql.length() - 1, sql.length());
+		}
+		
+		StringBuilder condition = new StringBuilder(" WHERE ");
+		List<Object> idParams = new LinkedList<>();
+		for (Entry<Column,Field> entry : idColumnField.entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			Object value = getValue(data, field);
+			if(value == null){
+				condition.append(column.name()).append(" IS NULL AND ");
+			} else {
+				condition.append(column.name()).append(" = ? AND ");
+				idParams.add(value);
+			}
+		}
+		if(condition.toString().length() > " AND ".length()){
+			condition.delete(condition.length() - " AND ".length(), condition.length());
+		}
+		
+		sql.append(condition);
+		updateParams.addAll(idParams);
+		return update(sql.toString(), toArray(updateParams));
+		
+	}
+	
+	public List<T> query(T data){
+		StringBuilder sql = new StringBuilder(query);
+		Map<Column, Field> idColumnField = ClassStructCache.COLUMN_FIELD_ID_MAPPING.get(data.getClass());
+		StringBuilder condition = new StringBuilder(" WHERE ");
+		List<Object> idParams = new LinkedList<>();
+		for (Entry<Column,Field> entry : idColumnField.entrySet()) {
+			Column column = entry.getKey();
+			Field field = entry.getValue();
+			Object value = getValue(data, field);
+			if(value == null){
+				condition.append(column.name()).append(" IS NULL AND ");
+			} else {
+				condition.append(column.name()).append(" = ? AND ");
+				idParams.add(value);
+			}
+		}
+		if(condition.toString().length() > " AND ".length()){
+			condition.delete(condition.length() - " AND ".length(), condition.length());
+		}
+		
+		sql.append(condition);
+		return query(sql.toString(), toArray(idParams));
+		
+	}
+	
+	private Object[] toArray(List<Object> datas){
+		Object[] array = new Object[datas.size()];
+		for (int i = 0; i < array.length; i++) {
+			array[i] = datas.get(i);
+		}
+		return array;
 	}
 	
 	protected List<T> getExistPojos(List<T> datas){
@@ -305,4 +372,19 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		return "".equals(sb.toString()) ? "''" : sb.toString();
 	}
 	
+	private Object getValue(T data, Field field){
+		Map<Field, Method> getter = ClassStructCache.FIELD_GETTER_MAPPING.get(data.getClass());
+		Object value = null;
+		try {
+			Method method = getter.get(field);
+			value = method.invoke(data);
+		} catch (IllegalAccessException e) {
+			LOG.error("", e);
+		} catch (IllegalArgumentException e) {
+			LOG.error("", e);
+		} catch (InvocationTargetException e) {
+			LOG.error("", e);
+		}
+		return value;
+	}
 }

@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.Date;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 
 import org.junit.Before;
@@ -59,7 +60,7 @@ public class TestORM {
 		
 		Stock stock2 = new Stock();
 		stock2.setId(1024);
-		stock2.setCode("XZ000002");
+		stock2.setCode("XZ000012");
 		stock2.setName("卡西欧");
 		stock2.setStatus(1);
 		stock2.setListDate(new Date(new java.util.Date().getTime()));
@@ -73,18 +74,22 @@ public class TestORM {
 		list.add(stock);
 		list.add(stock2);
 		
+		stockStorage.update(stock2);
 //		stockStorage.saveOrUpdate(stock2);
 		
 //		stockStorage.saveUnique(list);
 //		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
-//		int querySize = 1000;
-//		long start = System.currentTimeMillis();
-//		for (int i = 0; i < querySize; i++) {
-//			stockStorage.query(sql, new Object[]{"sh600000"});
-//			
-//		}
-//		System.out.println("平均耗时：" + (System.currentTimeMillis() - start) / querySize);
+		int querySize = 1000;
+		Stock stock3 = new Stock();
+		stock3.setCode("SH600000");
+		long start = System.currentTimeMillis();
+		for (int i = 0; i < querySize; i++) {
+			List<Stock> query = stockStorage.query(stock3);
+//			System.out.println(query);
+			
+		}
+		System.out.println("平均耗时：" + (System.currentTimeMillis() - start) / querySize);
 	}
 
 }

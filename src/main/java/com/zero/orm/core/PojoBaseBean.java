@@ -13,10 +13,8 @@ import java.util.Map.Entry;
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
-import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
@@ -50,10 +48,6 @@ public abstract class PojoBaseBean {
 		}
 	}
 	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getQuerySql()
-	 */
-	
 	public String getQuerySql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
@@ -69,105 +63,6 @@ public abstract class PojoBaseBean {
 		return sql.toString();
 		
 	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getSaveSql()
-	 */
-	
-	
-	public String getUpdateSql(){
-		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		String tableName = tableAnnotation.name();
-		
-		StringBuilder sql = new StringBuilder("UPDATE ");
-		sql.append(tableName).append(" SET ");
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		for (Field field : declaredFields) {
-			String columnName = "";
-			boolean isId = false;
-			boolean isUseDbTime = false;
-			boolean isUpdatable = true;
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					isUpdatable = column.updatable();
-					columnName = column.name();
-					String columnDefinition = column.columnDefinition();
-					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
-							|| columnDefinition.toUpperCase().contains("SYSDATE")){
-						isUseDbTime = true;
-					}
-				}
-			}
-			if(!isId && isUpdatable){
-				sql.append(columnName).append(" = ");
-				if(isUseDbTime){
-					sql.append("#timestamp#,");
-				} else {
-					sql.append("?,");
-				}
-			}
-		}
-		
-		if(sql.toString().endsWith(",")){
-			sql.delete(sql.length() - 1, sql.length());
-		}
-		return sql.toString();
-		
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateSqlById()
-	 */
-	
-	public String getUpdateSqlByUniqueConstraints(){
-		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
-		UniqueConstraint[] uniqueConstraints = tableAnnotation.uniqueConstraints();
-		List<String> uniqueColumnNames = new LinkedList<String>();
-		for (UniqueConstraint uniqueConstraint : uniqueConstraints) {
-			String[] columnNames = uniqueConstraint.columnNames();
-			for (String columnName : columnNames) {
-				uniqueColumnNames.add(columnName);
-			}
-		}
-		if(uniqueColumnNames.isEmpty()){
-			Field[] declaredFields = this.getClass().getDeclaredFields();
-			for (Field field : declaredFields) {
-				String columnName = "";
-				boolean isId = false;
-				Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-				for (Annotation annotation : declaredAnnotations) {
-					if(annotation instanceof Id){
-						isId = true;
-					}
-					if(annotation instanceof Column){
-						Column column = (Column)annotation;
-						columnName = column.name();
-					}
-				}
-				if(isId && !"".equals(columnName)){
-					uniqueColumnNames.add(columnName);
-				}
-			}
-		}
-		StringBuilder sql = new StringBuilder(getUpdateSql());
-		sql.append(" WHERE ");
-		for (String columnName : uniqueColumnNames) {
-			sql.append(columnName).append(" = ? AND ");
-		}
-		if(sql.length() > 0){
-			sql.delete(sql.length() - 4, sql.length());
-		}
-		return sql.toString();
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteSql()
-	 */
 	
 	public String getDeleteByIdSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
@@ -268,10 +163,6 @@ public abstract class PojoBaseBean {
 	}
 	
 	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamList()
-	 */
-	
 	public List<Object> getParamList(){
 		List<Object> list = new LinkedList<Object>();
 		Object[] paramArray = getSaveArray();
@@ -280,10 +171,6 @@ public abstract class PojoBaseBean {
 		}
 		return list;
 	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getParamArray()
-	 */
 	
 	public String getSaveSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
@@ -373,68 +260,6 @@ public abstract class PojoBaseBean {
 		}
 		return params;
 	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdList()
-	 */
-	
-	public List<Object> getUpdateByUniqueConstraintsList(){
-		List<Object> list = new LinkedList<Object>();
-		Object[] paramArray = getUpdateByUniqueConstraintsArray();
-		for (Object object : paramArray) {
-			list.add(object);
-		}
-		return list;
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getUpdateByIdArray()
-	 */
-	
-	public Object[] getUpdateByUniqueConstraintsArray(){
-		List<Field> updateColumnField = new LinkedList<Field>();
-		Field[] declaredFields = this.getClass().getDeclaredFields();
-		for (Field field : declaredFields) {
-			boolean isId = false;
-			boolean isUseDbTime = false;
-			boolean isUpdatable = true;
-			Annotation[] declaredAnnotations = field.getDeclaredAnnotations();
-			for (Annotation annotation : declaredAnnotations) {
-				if(annotation instanceof Id){
-					isId = true;
-				}
-				if(annotation instanceof Column){
-					Column column = (Column)annotation;
-					isUpdatable = column.updatable();
-					String columnDefinition = column.columnDefinition();
-					if(columnDefinition.toUpperCase().contains("CURRENT_TIMESTAMP")
-							|| columnDefinition.toUpperCase().contains("SYSDATE")){
-						isUseDbTime = true;
-					}
-				}
-			}
-			if(!isId && isUpdatable){
-				if(!isUseDbTime){
-					updateColumnField.add(field);
-				}
-			}
-		}
-		Object[] uniqueConstraintsArray = getExistArray();
-		Object[] params = new Object[updateColumnField.size() + uniqueConstraintsArray.length]; 
-		for (int i = 0; i < updateColumnField.size(); i++) {
-			params[i] = getValue(updateColumnField.get(i));
-			
-		}
-		for (int i = 0; i < uniqueConstraintsArray.length; i++) {
-			params[updateColumnField.size() + i] = uniqueConstraintsArray[i];
-			
-		}
-		return params;
-	}
-	
-	/* (non-Javadoc)
-	 * @see com.catt.tsdn.collect.bean.pojo.IPojo#getDeleteByIdList()
-	 */
 	
 	public List<Object> getDeleteByIdList(){
 		List<Object> list = new LinkedList<Object>();

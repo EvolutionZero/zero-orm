@@ -8,11 +8,9 @@ import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.UniqueConstraint;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +19,7 @@ import lombok.ToString;
 import com.zero.orm.core.PojoBaseBean;
 
 @ToString
-@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
+@Table(name="t_code")
 //@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
 public class Stock extends PojoBaseBean{
 
@@ -35,7 +33,6 @@ public class Stock extends PojoBaseBean{
 	
 	@Getter
 	@Setter
-	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)  
 	@Column(name="id")
 	private Integer id;
@@ -46,13 +43,13 @@ public class Stock extends PojoBaseBean{
 	@Column(name="code")
 	private String code;
 	
-	@Getter
-	@Setter
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator="seqId")  
-	@SequenceGenerator(name="seqId", sequenceName="SEQ_ID") 
-	@Column(name="seq")
-	private Integer seq;
+//	@Getter
+//	@Setter
+//	@Id
+//	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator="seqId")  
+//	@SequenceGenerator(name="seqId", sequenceName="SEQ_ID") 
+//	@Column(name="seq")
+//	private Integer seq;
 	
 	
 	@Getter

@@ -22,14 +22,14 @@ public class ClassStructCache {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ClassStructCache.class);
 	
-	public static final Map<Class<?>, Map<Column, Field>> COLUMN_FIELD_MAPPING = new HashMap<>();
-	public static final Map<Class<?>, Map<Field, Column>> FIELD_COLUMN_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Column, Field>> COLUMN_FIELD_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Field, Column>> FIELD_COLUMN_MAPPING = new HashMap<>();
 	
-	public static final Map<Class<?>, Map<Field, Method	>> FIELD_GETTER_MAPPING = new HashMap<>();
-	public static final Map<Class<?>, Map<Field, Method	>> FIELD_SETTER_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Field, Method	>> FIELD_GETTER_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Field, Method	>> FIELD_SETTER_MAPPING = new HashMap<>();
 	
-	public static final Map<Class<?>, Map<Column, Field>> COLUMN_FIELD_ID_MAPPING = new HashMap<>();
-	public static final Map<Class<?>, Map<Field, Column>> FIELD_COLUMN_ID_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Column, Field>> COLUMN_FIELD_ID_MAPPING = new HashMap<>();
+	protected static final Map<Class<?>, Map<Field, Column>> FIELD_COLUMN_ID_MAPPING = new HashMap<>();
 	
 	static{
 		List<Class<?>> subClazzs = ClassUtils.findSubClass(PojoBaseBean.class);
@@ -41,10 +41,6 @@ public class ClassStructCache {
 		initFieldColumnIdMapping(subClazzs);
 	}
 
-	public static void main(String[] args) {
-		System.out.println(FIELD_COLUMN_MAPPING);
-	}
-	
 	private static void initColumnFieldMapping(List<Class<?>> clazzs){
 		for (Class<?> clazz : clazzs) {
 			COLUMN_FIELD_MAPPING.put(clazz, genColumnFieldMap(clazz));
