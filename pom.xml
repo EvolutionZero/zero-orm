@@ -22,11 +22,6 @@
 			<version>1.7.5</version>
 		</dependency>
 		<dependency>
-			<groupId>ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.0.13</version>
-		</dependency>
-		<dependency>
 			<groupId>commons-dbutils</groupId>
 			<artifactId>commons-dbutils</artifactId>
 			<version>1.6</version>
@@ -38,25 +33,36 @@
 		</dependency>
 
 		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.13</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>5.1.29</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>proxool</groupId>
 			<artifactId>proxool</artifactId>
 			<version>0.9.1</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.cloudhopper.proxool</groupId>
 			<artifactId>proxool-cglib</artifactId>
 			<version>0.9.1</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
 			<version>1.2</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
