@@ -12,8 +12,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
 
-import com.zero.orm.app.pojo.Stock;
-import com.zero.orm.app.storage.StockStorage;
+import com.zero.orm.app.pojo.Sample;
+import com.zero.orm.app.storage.SampleStorage;
 
 public class TestORM {
 
@@ -31,8 +31,8 @@ public class TestORM {
 
 	@Test
 	public void testQuery() {
-		StockStorage stockStorage = new StockStorage();
-		Stock stock = new Stock();
+		SampleStorage stockStorage = new SampleStorage();
+		Sample stock = new Sample();
 		stock.setId(1024);
 		stock.setCode("XZ000001");
 		stock.setName("零的世界");
@@ -58,7 +58,7 @@ public class TestORM {
 //		System.out.println(stock.getUpdateSqlByUniqueConstraints());
 //		System.out.println(stock.getUpdateByUniqueConstraintsList());
 		
-		Stock stock2 = new Stock();
+		Sample stock2 = new Sample();
 		stock2.setId(1024);
 		stock2.setCode("XZ000012");
 		stock2.setName("卡西欧");
@@ -70,7 +70,7 @@ public class TestORM {
 		stock2.setLocation("C");
 		stock2.setPlate("深圳B股");
 		
-		LinkedList<Stock> list = new LinkedList<Stock>();
+		LinkedList<Sample> list = new LinkedList<Sample>();
 		list.add(stock);
 		list.add(stock2);
 		
@@ -81,11 +81,11 @@ public class TestORM {
 //		
 //		String sql = stock.getQuerySql() + " WHERE CODE = ?";
 		int querySize = 1000;
-		Stock stock3 = new Stock();
+		Sample stock3 = new Sample();
 		stock3.setCode("SH600000");
 		long start = System.currentTimeMillis();
 		for (int i = 0; i < querySize; i++) {
-			List<Stock> query = stockStorage.query(stock3);
+			List<Sample> query = stockStorage.query(stock3);
 //			System.out.println(query);
 			
 		}

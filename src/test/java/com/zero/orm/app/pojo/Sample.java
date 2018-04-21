@@ -21,13 +21,13 @@ import com.zero.orm.core.PojoBaseBean;
 @ToString
 @Table(name="t_code")
 //@Table(name="t_code", uniqueConstraints=@UniqueConstraint(columnNames={"name"}))
-public class Stock extends PojoBaseBean{
+public class Sample extends PojoBaseBean{
 
-	public Stock(){
+	public Sample(){
 		
 	}
 	
-	public Stock(Map<String, Object> resultSet){
+	public Sample(Map<String, Object> resultSet){
 		super(resultSet);
 	}
 	
