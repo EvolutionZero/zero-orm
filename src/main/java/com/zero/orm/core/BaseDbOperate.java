@@ -90,7 +90,31 @@ public abstract class BaseDbOperate<T> {
 		}
 	};
 	
+	private ResultSetHandler<List<Map<String, Object>>> listMapHandler = new ResultSetHandler<List<Map<String, Object>>>(){
 
+		@Override
+		public List<Map<String, Object>> handle(ResultSet rs)
+				throws SQLException {
+			List<Map<String, Object>> resultList = new LinkedList<Map<String, Object>>();
+			ResultSetMetaData metaData = rs.getMetaData();
+			List<String> columnNames = new LinkedList<>();
+			for (int i = 0; i < metaData.getColumnCount(); i++) {
+				String columnName = metaData.getColumnName(i + 1);
+				columnNames.add(columnName);
+			}
+			while(rs.next()){
+				Map<String, Object> map = new HashMap<>();
+				for (String columnName : columnNames) {
+					Object value = rs.getObject(columnName);
+					map.put(columnName, value);
+				}
+				resultList.add(map);
+			}
+			return resultList;
+		}
+	};
+	
+	
 	@SuppressWarnings("unchecked")
 	public List<T> query(String sql){
 		long start = System.currentTimeMillis();
@@ -122,6 +146,50 @@ public abstract class BaseDbOperate<T> {
 		Connection connection = getConnection();
 		try {
 			pojos = (List<T>)new QueryRunner().query(connection, sql, handler, params);
+		} catch (Exception e) {
+			LOG.error("", e);
+		} finally {
+			DbUtils.closeQuietly(connection);
+			long end = System.currentTimeMillis();
+			
+			StringBuilder info = new StringBuilder("\n");
+			info.append("执行SQL: \n").append(sql).append("\n");
+			info.append("设置参数: \n").append(printf(params)).append("\n");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
+			LOG.info(info.toString());
+		}
+		return pojos;
+	}
+	
+	public List<Map<String, Object>> queryForList(String sql){
+		long start = System.currentTimeMillis();
+		Connection connection = getConnection();
+		List<Map<String, Object>> pojos = new LinkedList<Map<String, Object>>();
+		try {
+			pojos = (List<Map<String, Object>>)new QueryRunner().query(connection, sql, listMapHandler);
+		} catch (Exception e) {
+			LOG.error("", e);
+		} finally {
+			DbUtils.closeQuietly(connection);
+			long end = System.currentTimeMillis();
+			
+			StringBuilder info = new StringBuilder("\n");
+			info.append("执行SQL: \n").append(sql).append("\n");
+			info.append("执行耗时: ").append(end - start).append(" ms.");
+			LOG.info(info.toString());
+		}
+		return pojos;
+	}
+	
+	public List<Map<String, Object>> queryForList(String sql, Object[] params){
+		List<Map<String, Object>> pojos = new LinkedList<Map<String, Object>>();
+		if(params == null || params.length == 0){
+			return pojos;
+		}
+		long start = System.currentTimeMillis();
+		Connection connection = getConnection();
+		try {
+			pojos = (List<Map<String, Object>>)new QueryRunner().query(connection, sql, listMapHandler, params);
 		} catch (Exception e) {
 			LOG.error("", e);
 		} finally {
