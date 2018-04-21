@@ -271,7 +271,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		
 	}
 	
-	private Object[] toArray(List<Object> datas){
+	protected Object[] toArray(List<Object> datas){
 		Object[] array = new Object[datas.size()];
 		for (int i = 0; i < array.length; i++) {
 			array[i] = datas.get(i);
