@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -75,6 +76,13 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 					String databaseProductName = connection.getMetaData().getDatabaseProductName();
 					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
 						save = save.replace("#timestamp#", "now()");
+						List<String> keywords = Arrays.asList(new String[]{"code", "name" , "close", "open", "change"});
+						for (String keyword : keywords) {
+							if(save.contains("," + keyword + ",") || save.contains("(" + keyword + ",")){
+								save = save.replace("," + keyword + ",", ",`" + keyword + "`,")
+										.replace("(" + keyword + ",", "(`" + keyword + "`,");
+							}
+						}
 					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
 						save = save.replace("#timestamp#", "sysdate");
 					}

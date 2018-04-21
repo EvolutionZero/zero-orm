@@ -175,7 +175,6 @@ public abstract class PojoBaseBean {
 	public String getSaveSql(){
 		Table tableAnnotation = this.getClass().getDeclaredAnnotation(Table.class);
 		String tableName = tableAnnotation.name();
-		
 		StringBuilder sql = new StringBuilder("INSERT INTO ");
 		sql.append(tableName).append("(");
 		
