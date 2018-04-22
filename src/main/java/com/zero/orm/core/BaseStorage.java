@@ -8,7 +8,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -44,6 +43,8 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	
 	public abstract Connection getConnection();
 	
+	protected Database dbType;
+	
 	public BaseStorage(){
 		Class<?> clazz = getGenericClass();
 		if(clazz != null){
@@ -75,16 +76,16 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				try {
 					String databaseProductName = connection.getMetaData().getDatabaseProductName();
 					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
+						dbType = Database.MYSQL;
 						save = save.replace("#timestamp#", "now()");
-						List<String> keywords = Arrays.asList(new String[]{"code", "name" , "close", "open", "change"});
-						for (String keyword : keywords) {
-							if(save.contains("," + keyword + ",") || save.contains("(" + keyword + ",")){
-								save = save.replace("," + keyword + ",", ",`" + keyword + "`,")
-										.replace("(" + keyword + ",", "(`" + keyword + "`,");
-							}
-						}
 					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
+						dbType = Database.ORACLE;
 						save = save.replace("#timestamp#", "sysdate");
+						
+						save = save.replace("`", "\"");
+						exist = exist.replace("`", "\"");
+						query = query.replace("`", "\"");
+						deleteById = deleteById.replace("`", "\"");
 					}
 				} catch (SQLException e1) {
 					LOG.error("", e1);
@@ -215,7 +216,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			
 			Object value = getValue(data, field);
 			if(value != null && column.updatable()){
-				sql.append(column.name()).append(" = ? ,");
+				sql.append("`").append(column.name()).append("`").append(" = ? ,");
 				updateParams.add(value);
 			}
 		}
@@ -230,9 +231,9 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			Field field = entry.getValue();
 			Object value = getValue(data, field);
 			if(value == null){
-				condition.append(column.name()).append(" IS NULL AND ");
+				condition.append("`").append(column.name()).append("`").append(" IS NULL AND ");
 			} else {
-				condition.append(column.name()).append(" = ? AND ");
+				condition.append("`").append(column.name()).append("`").append(" = ? AND ");
 				idParams.add(value);
 			}
 		}
@@ -242,7 +243,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		
 		sql.append(condition);
 		updateParams.addAll(idParams);
-		return update(sql.toString(), toArray(updateParams));
+		return update(Database.ORACLE.equals(dbType) ? sql.toString().replace("`", "\"") : sql.toString(), toArray(updateParams));
 		
 	}
 	
@@ -256,9 +257,9 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			Field field = entry.getValue();
 			Object value = getValue(data, field);
 			if(value == null){
-				condition.append(column.name()).append(" IS NULL AND ");
+				condition.append("`").append(column.name()).append("`").append(" IS NULL AND ");
 			} else {
-				condition.append(column.name()).append(" = ? AND ");
+				condition.append("`").append(column.name()).append("`").append(" = ? AND ");
 				idParams.add(value);
 			}
 		}

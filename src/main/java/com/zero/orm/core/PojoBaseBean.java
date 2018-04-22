@@ -54,7 +54,7 @@ public abstract class PojoBaseBean {
 		
 		StringBuilder sql = new StringBuilder("SELECT ");
 		for (Column column : ClassStructCache.COLUMN_FIELD_MAPPING.get(getClass()).keySet()) {
-			sql.append(column.name()).append(",");
+			sql.append("`").append(column.name()).append("`").append(",");
 		}
 		if(sql.toString().endsWith(",")){
 			sql.delete(sql.length() - 1, sql.length());
@@ -72,7 +72,7 @@ public abstract class PojoBaseBean {
 		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
 			Column column = entry.getKey();
 			
-			sql.append(column.name()).append(" = ?").append(" AND ");
+			sql.append("`").append(column.name()).append("`").append(" = ?").append(" AND ");
 		}
 		if(sql.toString().endsWith(" AND ")){
 			sql.delete(sql.length() - " AND ".length(), sql.length());
@@ -107,7 +107,7 @@ public abstract class PojoBaseBean {
 		sql.append("SELECT ");
 		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
 			Column column = entry.getKey();
-			sql.append(column.name()).append(",");
+			sql.append("`").append(column.name()).append("`").append(",");
 		}
 		if(sql.length() > 0){
 			sql.delete(sql.length() - 1, sql.length());
@@ -115,7 +115,7 @@ public abstract class PojoBaseBean {
 		sql.append(" FROM ").append(tableName).append(" WHERE ");
 		for (Entry<Column,Field> entry : columnFieldIdMap.entrySet()) {
 			Column column = entry.getKey();
-			sql.append(column.name()).append(" = ? AND ");
+			sql.append("`").append(column.name()).append("`").append(" = ? AND ");
 		}
 		if(sql.length() > 0){
 			sql.delete(sql.length() - 4, sql.length());
@@ -189,12 +189,12 @@ public abstract class PojoBaseBean {
 			if(isIdentity(field)){
 				
 			} else if(isSequence(field)){
-				sql.append(column.name()).append(",");
+				sql.append("`").append(column.name()).append("`").append(",");
 				String sequenceName = getSequenceName(field);
 				values.append(sequenceName).append(".NEXTVAL,");
 				
 			} else {
-				sql.append(column.name()).append(",");
+				sql.append("`").append(column.name()).append("`").append(",");
 				values.append("?,");
 			}
 		}
@@ -206,10 +206,10 @@ public abstract class PojoBaseBean {
 			
 			if(!idFields.contains(field)){
 				if(isUseDbTime(column)){
-					sql.append(column.name()).append(",");
+					sql.append("`").append(column.name()).append("`").append(",");
 					values.append("#timestamp#,");
 				} else {
-					sql.append(column.name()).append(",");
+					sql.append("`").append(column.name()).append("`").append(",");
 					values.append("?,");
 				}
 			}
