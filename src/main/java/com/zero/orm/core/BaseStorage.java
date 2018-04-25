@@ -24,9 +24,6 @@ import org.apache.commons.dbutils.DbUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-enum Database{
-	MYSQL, ORACLE;
-}
 
 public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<T>{
 
@@ -42,8 +39,6 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	protected String deleteById;
 	
 	public abstract Connection getConnection();
-	
-	protected Database dbType;
 	
 	public BaseStorage(){
 		Class<?> clazz = getGenericClass();
@@ -76,10 +71,8 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				try {
 					String databaseProductName = connection.getMetaData().getDatabaseProductName();
 					if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
-						dbType = Database.MYSQL;
 						save = save.replace("#timestamp#", "now()");
 					} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
-						dbType = Database.ORACLE;
 						save = save.replace("#timestamp#", "sysdate");
 						
 						save = save.replace("`", "\"");
@@ -109,7 +102,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		if(datas.isEmpty()){
 			return ;
 		}
-		insert(save, getSaveParams(datas));
+		insert(adaptDb(save), getSaveParams(datas));
 	}
 	
 	public void saveOnly(T data){
@@ -144,7 +137,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				saveDatas.add(data);
 			}
 		}
-		insert(save, getSaveParams(saveDatas));
+		insert(adaptDb(save), getSaveParams(saveDatas));
 	}
 	
 	public void saveUnique(T data){
@@ -181,7 +174,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 				saveDatas.add(data);
 			}
 		}
-		insert(save, getSaveParams(saveDatas));
+		insert(adaptDb(save), getSaveParams(saveDatas));
 		for (T data : updateDatas) {
 			update(data);
 		}
@@ -243,7 +236,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		
 		sql.append(condition);
 		updateParams.addAll(idParams);
-		return update(Database.ORACLE.equals(dbType) ? sql.toString().replace("`", "\"") : sql.toString(), toArray(updateParams));
+		return update(adaptDb(sql.toString()), toArray(updateParams));
 		
 	}
 	
@@ -268,7 +261,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 		}
 		
 		sql.append(condition);
-		return query(sql.toString(), toArray(idParams));
+		return query(adaptDb(sql.toString()), toArray(idParams));
 		
 	}
 	
@@ -313,10 +306,10 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			}
 			String inCondition = toInList(keys);
 			String sql = exist.replace("= ?", "") + " IN (" + inCondition + ")";
-			result.addAll(query(sql));
+			result.addAll(query(adaptDb(sql)));
 		} else {
 			for (T pojo : datas) {
-				result.addAll(query(exist, pojo.getExistArray()));
+				result.addAll(query(adaptDb(exist), pojo.getExistArray()));
 			}
 		}
 		
@@ -344,7 +337,7 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 	
 	public void deleteById(T bean){
 		Object idValue = getIdValue(bean);
-		delete(deleteById, new Object[]{idValue});
+		delete(adaptDb(deleteById), new Object[]{idValue});
 	}
 	
 	protected String toInList(Collection<?> datas){
@@ -395,5 +388,9 @@ public abstract class BaseStorage<T extends PojoBaseBean> extends BaseDbOperate<
 			LOG.error("", e);
 		}
 		return value;
+	}
+	
+	private String adaptDb(String sql){
+		return Database.ORACLE.equals(dbType) ? sql.replace("`", "\"") : sql;
 	}
 }

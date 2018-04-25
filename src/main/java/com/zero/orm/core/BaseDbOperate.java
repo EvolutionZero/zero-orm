@@ -26,6 +26,10 @@ import org.apache.commons.dbutils.ResultSetHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+enum Database{
+	MYSQL, ORACLE;
+}
+
 public abstract class BaseDbOperate<T> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(BaseDbOperate.class);
@@ -114,6 +118,23 @@ public abstract class BaseDbOperate<T> {
 		}
 	};
 	
+	protected Database dbType;
+	
+	public BaseDbOperate() {
+		Connection connection = getConnection();
+		try {
+			String databaseProductName = connection.getMetaData().getDatabaseProductName();
+			if(databaseProductName.toUpperCase().contains(Database.MYSQL.toString())){
+				dbType = Database.MYSQL;
+			} else if(databaseProductName.toUpperCase().contains(Database.ORACLE.toString())){
+				dbType = Database.ORACLE;
+			}
+		} catch (SQLException e1) {
+			LOG.error("", e1);
+		} finally {
+			DbUtils.closeQuietly(connection);
+		}
+	}
 	
 	@SuppressWarnings("unchecked")
 	public List<T> query(String sql){
